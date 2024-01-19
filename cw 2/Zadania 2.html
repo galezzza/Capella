@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Zadania 2</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="style.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<h2 id="ładowanie-vao-i-vbo">Ładowanie VAO i VBO</h2>
+<p>W trakcie tych zajęć przećwiczymy ładowanie danych do pamięci. Tym razem, zamiast korzystać z gotowej funkcji utworzymy je samodzielnie. W openglu wykorzystujemy do tego VBO (Vertex Buffer Object) i VAO (Vertex Array Object). Pierwsza jest buforem, który zawiera dane modeli. Natomiast drugi zawiera informacje jak dane bufory interpretować.</p>
+<p>W zadaniu <code>2_1</code> będziemy przesyłać prostopadłościan. Tablica zawierająca jego definicję jest w pliku <code>Box.cpp</code>. Każdy wierzchołek składa się z ośmiu floatów, pierwsze cztery określają jego pozycję, a cztery kolejny określają jego kolor.</p>
+<p>Inicjalizacje będziemy wykonywać wewnątrz funkcji <code>init</code>. Pierwszym krokiem jest wygenerowanie jednego VAO i jednego VBO. Wykorzystuje się do tego odpowiednio funkcje <code>glGenVertexArrays</code> i <code>glGenBuffers</code>. Pierwszym argumentem jest liczba buforów czy array object, które tworzymy, drugim jest adres, w którym ma być bufor/array object umieszczony. W naszym przypadku pierwszym argumentem będzie 1, natomiast drugim będzie wskaźnik na zmienną <code>VAO</code> i <code>VBO</code> odpowiednio. Następnie należy aktywować <code>VAO</code> za pomocą funkcji <code>glBindVertexArray</code>, po czym podpiąć do niego bufor <code>VBO</code> za pomocą <code>glBindBuffer(GLenum target, GLuint buffer)</code> nasz target to <code>GL_ARRAY_BUFFER</code>, czyli bufor, który oznacza atrybuty wierzchołków.</p>
+<p>Kolejnym krokiem jest umieszczenie danych w buforze za pomocą funkcji <code>glBufferData(GLenum target, GLsizeiptr size, const void * data, GLenum usage)</code>. Pierwszym argumentem jest ponownie <code>GL_ARRAY_BUFFER</code>, drugi to rozmiar tablicy w bajtach, trzecim adres tablicy, a czwartym sposób używania tablicy, w naszym przypadku <code>GL_STATIC_DRAW</code>.</p>
+<p>Pozostaje opisanie atrybutów wierzchołków, musimy opisać, gdzie się znajdują, jaką mają strukturę i jak ma się do nich odnieść shader. My mamy 2 atrybuty, jest to pozycja i kolor. Pierwszym krokiem jest aktywacja atrybutów za pomocą <code>glEnableVertexAttribArray(GLuint index)</code>, przy czym po indeksie będą one odnajdywane przez shader. W naszym przypadku będą to odpowiednio 0 i 1. Następnie należy opisać jak GPU ma odczytywać atrybuty z bufora za pomocą funkcji <code>glVertexAttribPointer( GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void * offset)</code>. Jej argumenty to kolejno: * <code>index</code> - indeksy odpowiadające atrybutowi, * <code>size</code> - liczba elementów w atrybucie wierzchołka, może wynosić 1, 2, 3 lub 4, * <code>type</code> - typ danych jako enum, w naszym przypadku <code>GL_FLOAT</code>, * <code>normalized</code> - określa czy wartość ma być znormalizowana, u nas będzie to <code>GL_FALSE</code>, * <code>stride</code> - określa dystans pomiędzy atrybutami w kolejnych wierzchołkach * <code>offset</code> - wskaźnik na pierwszy atrybut w tablicy, licząc względem początku tablicy i typu (void *)</p>
+<p>Struktura naszego prostopadłościanu ma na przemian pozycje i kolory, dlatego w obu przypadkach stride będzie wynosił ośmiokrotność rozmiaru <em>floata</em>. Natomiast <em>offest</em> będzie wynosił zero i czterokrotność rozmiaru <em>floata</em>.</p>
+<p><img src="./img/stride_offest.jpg" /></p>
+<p>Na koniec uwolnij <code>VAO</code> za pomocą instrukcji: <code>glBindVertexArray(0);</code>.</p>
+<p>Pozostaje narysować prostopadłościan. W funkcji <code>renderScene</code> wywołaj <code>glBindVertexArray</code> z argumentem <code>VAO</code>. Następnie narysuj za pomocą <code>glDrawArrays(GLenum mode, GLint first, GLsizei count)</code>. Pierwszym argumentem jest typ rysowanego obiektu, w naszym przypadku jest to <code>GL_TRIANGLES</code>, indeks pierwszego wierzchołka, czyli 0 i liczba wierzchołków czyli 36.</p>
+<h3 id="zadanie">Zadanie</h3>
+<p>podążając za powyższymi instrukcjami zainicjalizuj box, następnie obróć go za pomocą funkcji <code>glm::eulerAngleXYZ</code> tak, żeby było widać trzy ściany prostopadłościany. Dodaj również obrót wokół osi Y w czasie z użyciem funkcji <code>glm::eulerAngleXYZ</code>.</p>
+<h3 id="zadanie-1">Zadanie*</h3>
+<p>Wykonaj zadania z <code>ex_2_1b.hpp</code>.</p>
+<h2 id="shadery">Shadery</h2>
+<p>Shadery są programami uruchamianymi na karcie graficznej. W openglu wykorzystujemy język GLSL, który jest bardzo podobny do C++, posiada on liczne słowa kluczowe i funkcje matematyczne. Istnieją różne rodzaje shaderów, w tej sekcji skupimy się na dwóch z nich: shader wierzchołków i shader fragmentów. Pierwszy rodzaj wykonują operacje na wierzchołkach, przykładowo w tym zadaniu odpowiada za przemnożenie macierzy obrotu przez wierzchołki. Natomiast drugi określa kolor konkretnego fragmentu/piksela. Shadery są łączone w <em>pipeline</em>, to znaczy wykonuje się je sekwencyjnie, dane z poprzedniego są wysyłane do następnego. W zadaniu <code>2_1</code> wykorzystujemy następujące shadery</p>
+<p>shader wierzchołków</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#version 430 core</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">layout</span>(<span class="dt">location</span> = <span class="dv">0</span>) <span class="dt">in</span> <span class="dt">vec4</span> vertexPosition;</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="kw">layout</span>(<span class="dt">location</span> = <span class="dv">1</span>) <span class="dt">in</span> <span class="dt">vec4</span> vertexColor;</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">uniform</span> <span class="dt">mat4</span> transformation;</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span>()</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">gl_Position</span> = transformation * vertexPosition;</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>shader fragmentów</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode glsl"><code class="sourceCode glsl"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#version 430 core</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="dt">out</span> <span class="dt">vec4</span> out_color;</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> <span class="fu">main</span>()</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>{</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    out_color = <span class="dt">vec4</span>(<span class="fl">0.8</span>,<span class="fl">0.2</span>,<span class="fl">0.9</span>,<span class="fl">1.0</span>);</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>Shader wierzchołków odbiera 2 typy danych. Pierwszym są dane z bufora w liniach.</p>
+<pre><code>layout(location = 0) in vec4 vertexPosition;
+layout(location = 1) in vec4 vertexColor;</code></pre>
+<p>są one różne dla każdego wierzchołka. Zmienną, która ma odebrać te dane deklaruje się globalnie funkcją <code>main</code> i poprzedza się słowem kluczowym <code>in</code>. Prefiks <code>layout(location = ..)</code> jest opcjonalny i służy określeniu indeksu atrybutu, jest to ta sama wartość, którą ustawiliśmy w <code>glVertexAttribPointer</code>. Można je usunąć, wtedy o indeksie będzie decydować kolejność. Drugim typem jest <code>uniform</code>, w przeciwieństwie do danych z bufora, są one takie same dla każdego wierzchołka. W tym przypadku przesyłamy za jej pomocą macierz obrotu.</p>
+<p>Shader również wysyła dane. Domyślnie musi wysłać wyjściową pozycję wierzchołka, robi to przez zapisanie w <code>gl_Position</code> wektora 4-wymiarowego w funkcji <code>main</code>. Poza tym może również przesłać inne informacje. Wykonuje się to przez deklaracje zmiennej globalnej, którą poprzedza się słowem kluczowym <code>out</code>. Następnie należy ją wypełnić. W tym przypadku przesyłamy kolor wierzchołka.</p>
+<p>Shader fragmentów odbiera kolor z Shadera wierzchołków. Podobnie jak z obieraniem danych z buforu robimy to za pomocą słowa kluczowego <code>in</code>, w przypadku przesyłania zmiennej z jednego shadera do drugiego nazwy zmiennych muszą być <strong>takie same</strong> przy słowie kluczowym <code>out</code> i <code>in</code>. Zmiennej obranej nie można modyfikować.</p>
+<p>W najnowszej wersji opengla fragment shader nie ma domyślnego wyjścia na kolor, musimy sami je z definiować. Robimy to instrukcją <code>out vec4 out_color</code> następnie w funkcji <code>main</code> przypisujemy mu jakąś wartość.</p>
+<h3 id="zadanie-2">Zadanie</h3>
+<p>W tej chwili nasz prostopadłościan jest jednolitego koloru i nie możemy rozróżnić jego ścian. Przesłana przez nas wcześniej informacja o kolorze nie została wykorzystana. Bazując na powyższych informacjach prześlij wartość koloru zapisaną w <code>vertexColor</code> do shadera fragmentu i przypisz ją do wyjściowego koloru. Dodaj zmienną <code>in vec4 color</code> w shaderze fragmentów, następnie w funkcji <code>main</code> przypisz do niej wartość koloru. W shaderze fragmentów odbierz ją za pomocą <code>out</code> i przypisz do wyjściowego koloru.</p>
+<p>Zauważ, że kolor ścian nie jest jednolity, zamiast tego przechodzą gradientem od jednego koloru do drugiego. Dzieje się tak, ponieważ na etapie rasteryzacji kolor jest interpolowany. To znaczy: wartość jest uśredniana pomiędzy wierzchołkami trójkąta.</p>
+<h3 id="zadanie-3">Zadanie</h3>
+<p>Sprawdź, jak będzie wyglądać prostopadłościan z wyłączoną interpolacją. Dodaj przed <code>in</code> i <code>out</code> <code>color</code> słowo kluczowe <code>flat</code>.</p>
+<h3 id="zadanie-4">Zadanie</h3>
+<p>Prześlij czas od startu aplikacji do shadera fragmentów. Użyj funkcji <code>glfwGetTime</code>, by uzyskać czas. Utwórz zmienną <code>uniform</code> typu <code>float</code> we shaderze fragmentów. Następnie prześlij do niej wynik funkcji <code>glfwGetTime</code>. Aby przesłać czas do shadera, wykorzystaj funkcje <code>glUniform1f</code>. Pierwszym argumentem jest lokacja uniforma, drugim przypisywana wartość. Lokację uzyskamy za pomocą funckji <code>glGetUniformLocation(progam,"time")</code> pierwszym argumentem jest program, którego używamy a drugim nazwa zmiennej uniform. Podziel kolor przez czas, by uzyskać efekt, w którym prostopadłościan robi się czarny.</p>
+<h3 id="zadanie-5">Zadanie*</h3>
+<p>Wykorzystaj przesłany czas, żeby sprawić, żeby prostopadłościan znikał przez mieszanie go z kolorem tła. Wykorzystaj do tego następujące funkcje GLSL: <code>mix</code>, <code>sin</code>, <code>vec4</code>. Opis ich działania możesz znaleźć w dokumentacji https://docs.gl/.</p>
+<h3 id="zadanie-6">Zadanie</h3>
+<p>Prześlij pozycję lokalną i globalną pozycję wierzchołków do shadera fragmentów i wyświetl ją.</p>
+<p>W shaderze wierzchołków obok deklaracji <code>out vec4 color;</code> dodaj analogiczne o nazwie <code>pos_local</code> i <code>pos_global</code>. Do <code>pos_local</code> przypisz <code>vertexPosition</code>, a do <code>pos_global</code> przypisz <code>transformation * vertexPosition</code>. Podobnie dopisz odebranie ich w shaderze fragmentów. Użyj <code>pos_local</code>, następnie <code>pos_global</code> jako zamiast koloru. Dlaczego otrzymaliśmy taki efekt?</p>
+<h3 id="zadanie-7">Zadanie*</h3>
+<p>Użyj jednej ze zmiennych z poprzedniego zadania do zrobienia pasków na przynajmniej jednej ze ścian sześcianu. Wykorzystaj czas, żeby paski się przesuwały.</p>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>zadania 6</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<h1 id="teksturowanie">Teksturowanie</h1>
+<p>Te zajęcia są kontynuacją poprzednich Zalecam wykorzystać ukończony kod z poprzednich zajęć. Projekt startowy jest tylko częściowo ukończonymi zadaniami</p>
+<h3 id="zadanie">Zadanie</h3>
+<p>Obejrzyj plik <strong>Texture.h</strong>, aby zapoznać się z interfejsem do obsługi tekstur.</p>
+<h3 id="przygotuj-shadery-i-załaduj-teksturę">Przygotuj shadery i załaduj teksturę:</h3>
+<p>W kolejnych zadaniach będziemy potrzebować trzecią parę shaderów: <strong>shader_5_tex.vert</strong> i <strong>shader_5_tex.frag</strong> są one gotowymi shaderami z poprzednich zadań. Wczytaj shadery i przechowaj adres programu pod zmienną globalną <code>programTex</code>.</p>
+<p>Pod <code>namespace texture</code> znajdują się zmienne globalne typu <code>Gluint</code>, które będą przechowywać adresy tekstur. W funkcji <code>init()</code> załaduj tekstury z folderu <strong>textures</strong> przy pomocy <code>Core::LoadTexture</code>. Ta funkcja zwraca adres do wczytanej tekstury, przypisz je do zmiennych z <code>namespace texture</code>. (odwołanie się do <code>namespace</code> wykonuje się za pomocą ::, czyli by odwołać się do <code>grid</code> w <code>namespace</code> <code>texture</code> należy napisać <code>texture::grid</code>)</p>
+<p>Stwórz funkcje odpowiadająca za rysowanie teksturowanych obiektów. Skopiuj funkcję <code>drawObjectColor</code>. Nazwij kopię <code>drawObjectTexture()</code> i zmodyfikują ją tak, aby przyjmowała jako parametr identyfikator tekstury, a nie wektor koloru. (Usuń w niej linijkę odpowiadającą za przesyłanie koloru, żeby uniknąć błędu komunikacji, później dodamy na jej miejsce ładowanie tekstury).</p>
+<h3 id="zmodyfikuj-shader-tak-aby-nakładał-teksturę-na-obiekt">Zmodyfikuj shader tak, aby nakładał teksturę na obiekt:</h3>
+<p>Narysuj jedną z planet za pomocą <code>drawObjectTexture()</code>, użyj <code>programTex</code> jako programu.</p>
+<ol start="2" type="a">
+<li>Prześlij współrzędne mapowania tekstur z <em>vertex shadera</em> do <em>fragment shadera</em></li>
+</ol>
+<ul>
+<li>Współrzędne tekstur to kolejny (po pozycjach i wektorach normalnych) atrybut wierzchołków - są dostępne w <em>vertex shaderze</em> pod nazwą <code>vertexTexCoord</code></li>
+<li>Prześlij je znanym już sposobem do <em>fragment shadera</em> (zmienna <code>out</code> w <em>vertex shaderze</em> i odpowiadająca jej zmienna <code>in</code> we <em>fragment shaderze</em>)</li>
+</ul>
+<ol start="3" type="a">
+<li>Prześlij teksturę do fragment shadera:</li>
+</ol>
+<ul>
+<li>Stwórz zmienną typu <code>uniform sampler2D</code> (nazwij ją na przykład <code>colorTexture</code>) we fragment shaderze - analogicznie do innych zmiennych typu uniform, służy ona do przesyłania informacji bezpośrednio z kodu C++ do shadera</li>
+<li>Po stronie kodu C++ użyj funkcji <code>Core::SetActiveTexture</code> wewnątrz <code>drawObjectTexture()</code> aby ustawić zmienną <code>sampler2D</code> na wczytaną wcześniej teksturę.</li>
+</ul>
+<ol start="4" type="a">
+<li>Użyj wartości uzyskanej z tekstury zamiast koloru (<code>objectColor</code>) do pokolorowania obiektu:</li>
+</ol>
+<ul>
+<li>Wykonaj próbkowanie tekstury we współrzędnych otrzymanych przez fragment shader: <code>vec4 textureColor = texture2D(~nazwaZmiennejSampler2D, ~nazwaZmiennejWspolrzedneTekstury)</code>" (<code>vec4</code> zawiera kolor RGBA)</li>
+<li>Użyj pierwszych trzech współrzędnych (RGB) uzyskanego wektora jako nowego koloru bazowego piksela.</li>
+</ul>
+<h3 id="pobaw-się-mechanizmem-teksturowania">Pobaw się mechanizmem teksturowania:</h3>
+<ul>
+<li>Przemnóż jedną lub obie ze współrzędnych mapowania przez 5 i sprawdź, co się stanie.</li>
+<li>Wypróbuj pozostałe tekstury: <strong>grid_color.png</strong>, <strong>earth.png</strong>.</li>
+<li>Tekstury Ziemi wyświetlają się “do góry nogami”. Napraw to.</li>
+<li>Jeśli chcesz mieć kilka planet o różnych teksturach, możesz skorzystać z <a href="https://www.solarsystemscope.com/textures/">link</a> lub <a href="https://stevealbers.net/albers/sos/sos.html">link2</a>.</li>
+</ul>
+<h3 id="zadanie-1">Zadanie *</h3>
+<p>Nadaj jakieś tekstury wszystkim obiektom, które znajdują się w scenie.</p>
+<h2 id="multitexturing">Multitexturing</h2>
+<p>W tej części pokażemy jak wykorzystać więcej niż jedną teksturę przy rysowaniu obiektu na przykładzie zachmurzonej Ziemi.</p>
+<h3 id="zadanie-2">Zadanie</h3>
+<ul>
+<li>Utwórz kolejną parę shaderów, nazwij je <code>shader_earth</code>, skopiuj poprzednie shadery, jakie wykorzystywaliśmy,</li>
+<li>dodaj w nich nowy <code>uniform sampler2D</code> nazwij go <code>clouds</code>,</li>
+<li>użyj do rysowania ziemi nowo stworzonego shadera,</li>
+<li>wyślij dodatkowo teksturę chmur, która znajduje się pod plikiem <code>clouds.png</code>, ustaw indeks tekstury na <strong>2</strong>,</li>
+<li>by sprawdzić, czy całość się udała, użyj chmury jako kolory.</li>
+</ul>
+<p>Wykorzystamy teksturę chmur jako maskę. Ustaw kolor Ziemi jako mix między białym a kolorem tekstury Ziemi a za współczynnik mieszania weź kanał <code>r</code> tekstury chmur.</p>
+<h3 id="zadanie-3">Zadanie*</h3>
+<p>W podobny sposób wykorzystaj tekstury <code>ship.jpg</code>, <code>scratches.jpg</code> i <code>rust.jpg</code>, żeby dodać zarysowania do statku. Załaduj wszystkie trzy tekstury, użyj <code>scratches.jpg</code> jako maskę, która będzie wskazywała współczynnik, którym będziemy mieszać pomiędzy dwoma pozostałymi teksturami.</p>
+<h2 id="teksturowanie-proceduralne">Teksturowanie proceduralne</h2>
+<ol type="a">
+<li><p>Stwórz czwartą parę plików z shaderami (np. <strong>shader_proc_tex.vert</strong> i <strong>shader_proc_tex.frag</strong>). Następnie zainicjalizuj program jak w I.6.a) i II.1.a) (nazwij go np <code>programProcTex</code>). Do wywołania rysowania wykorzystuj funkcję <code>drawObject</code> (Żeby nie tracić oteksturowanych planet, możesz rysować za ich pomocą wyłącznie statek).</p></li>
+<li><p>Prostym sposobem proceduralnego teksturowania, jest uzależnienie koloru od pozycji piksela w przestrzeni lokalnej (użycie przestrzeni świata spowodowałoby, że wzór na obiekcie zmieniałby się przy poruszaniu go).</p></li>
+</ol>
+<ul>
+<li>Prześlij z vertex shadera do fragment shadera pozycję wierzchołka w przestrzeni lokalnej (czyli tej, w której wyrażone są atrybuty wierzchołka - nie trzeba więc wykonywać żadnej transformacji macierzowej).</li>
+<li>We fragment shaderze oblicz sinus współrzędnej y pozycji piksela.</li>
+<li>Jeżeli sinus jest większy od zera, to ustaw bazowy kolor obiektu na wybrany kolor, a jeśli jest mniejszy od zera, to na inny kolor.</li>
+<li>Możesz przesłać te kolory przy użyciu zmiennych uniform z kodu C++ - pozwoli to rysować różne obiekty z różnymi parami kolorów.</li>
+<li>Poeksperymentuj z innymi metodami teksturowania proceduralnego podanymi na wykładzie.</li>
+</ul>
+</body>
+</html>
