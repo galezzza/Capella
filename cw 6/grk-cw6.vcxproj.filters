@@ -91,40 +91,22 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\shader_5_sun.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_5_sun.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_5_1.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_5_1.vert">
+      <Filter>Shader Files</Filter>
+    </None>
     <None Include="shaders\shader_5_1_tex.vert">
       <Filter>Shader Files</Filter>
     </None>
     <None Include="shaders\shader_5_1_tex.frag">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="..\cw 5\shaders\shader_5_1.frag">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="..\cw 5\shaders\shader_5_sun.frag">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="..\cw 5\shaders\shader_5_1.vert">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="..\cw 5\shaders\shader_5_sun.vert">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="shaders\shader_earth.frag">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="shaders\shader_earth.vert">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="shaders\shader_proc_tex.frag">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="shaders\shader_proc_tex.vert">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="shaders\shader_spaceship.frag">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="shaders\shader_spaceship.vert">
       <Filter>Shader Files</Filter>
     </None>
   </ItemGroup>
