@@ -35,7 +35,6 @@ Core::RenderContext asteroid;
 glm::vec3 cameraPos = glm::vec3(-20.f, 0, 10.f);
 glm::vec3 cameraDir = glm::vec3(1.f, -0.f, 0.f);
 
-//glm::vec3 spaceshipPos = glm::vec3(-15.f, -3.f, 0);
 glm::vec3 spaceshipPos = cameraPos + 1.5 * cameraDir + glm::vec3(0, -0.5f, 0);
 glm::vec3 spaceshipDir = glm::vec3(1.f, -0.f, 0.f);
 GLuint VAO, VBO;
@@ -54,7 +53,7 @@ glm::vec3 lightDir = glm::vec3(1.0, 0.0, 0.0);
 float exp_param = 400.f;
 
 glm::vec3 spotPos = spaceshipPos;
-glm::vec3 spotDir = spaceshipDir + glm::vec3(0, -0.5f, 0);
+glm::vec3 spotDir = spaceshipDir + glm::vec3(0, -0.5f, 0.f);
 float angleAf = 3.14f / 2.f;
 
 namespace texture {
@@ -68,7 +67,7 @@ namespace texture {
 	GLuint earthNormal;
 	GLuint asteroidNormal;
 	GLuint shipNormal;
-	
+
 	GLuint scratches;
 	GLuint rust;
 }
@@ -147,7 +146,7 @@ void drawObjectColor(Core::RenderContext& context, glm::mat4 modelMatrix, glm::v
 
 	Core::DrawContext(context);
 }
-void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID, GLuint programTex){
+void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID, GLuint programTex) {
 
 	glUseProgram(programTex);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
@@ -171,7 +170,6 @@ void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLui
 	Core::DrawContext(context);
 }
 void drawEarth(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID1, GLuint textureID2) {
-//void drawMultipleTextures(Core::RenderContext& context, glm::mat4 modelMatrix, int arraytexturesSize, GLuint* textures[arraytexturesSize]) {
 
 	glUseProgram(programEarth);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
@@ -190,10 +188,9 @@ void drawEarth(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textu
 	glUniform3f(glGetUniformLocation(programEarth, "spotDir"), spotDir.x, spotDir.y, spotDir.z);
 	glUniform1f(glGetUniformLocation(programEarth, "angleAf"), angleAf);
 
-	//Core::SetActiveTexture(textures[arraytexturesSize], "texturesArray", programEarth, 0);
 	Core::SetActiveTexture(textureID1, "colorTexture", programEarth, 0);
 	Core::SetActiveTexture(textureID2, "clouds", programEarth, 1);
-	
+
 
 	Core::DrawContext(context);
 }
@@ -218,7 +215,7 @@ void drawSpaceship(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint t
 	Core::SetActiveTexture(textureID1, "shipTexture", programSpaceship, 0);
 	Core::SetActiveTexture(textureID2, "scratches", programSpaceship, 1);
 	Core::SetActiveTexture(textureID3, "rust", programSpaceship, 2);
-	
+
 
 	Core::DrawContext(context);
 }
@@ -242,8 +239,6 @@ void drawObjectProc(Core::RenderContext& context, glm::mat4 modelMatrix, glm::ve
 	glUniform3f(glGetUniformLocation(program, "spotDir"), spotDir.x, spotDir.y, spotDir.z);
 	glUniform1f(glGetUniformLocation(program, "angleAf"), angleAf);
 
-
-
 	Core::DrawContext(context);
 }
 void renderScene(GLFWwindow* window)
@@ -257,129 +252,19 @@ void renderScene(GLFWwindow* window)
 	int* height = new int(0);
 	glfwGetWindowSize(window, width, height);
 
-	//double gl_xpos, gl_ypos;
-	//glfwGetCursorPos(window, &gl_xpos, &gl_ypos);
-
-	//if ((0 < gl_xpos) && (gl_xpos < *width) && (0 < gl_ypos) && (gl_ypos < *height)) {
-	//	if (gl_xpos < *width / 2) {
-	//		spaceshipDir = glm::vec3(glm::eulerAngleY(angleSpeed) * glm::vec4(spaceshipDir, 0));
-	//	}
-	//	else {
-	//		spaceshipDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(spaceshipDir, 0));
-	//	}
-	//}
-
-
-
-	//drawObjectColor(sphereContext, glm::translate(glm::vec3(0, -10, 0)) * glm::scale(glm::vec3(1000, 0.1, 1000)), glm::vec3(0.8, 0.52, 0.24));
-	drawObjectColor(sphereContext, glm::translate(glm::vec3(500, 100, 270)) * glm::scale(glm::vec3(28)), glm::vec3(1, 1, 0.9), program);
-	drawObjectColor(sphereContext, glm::translate(glm::vec3(500, 30, 370)) * glm::scale(glm::vec3(25)), glm::vec3(0.95, 0.64, 0.64), program);
-	//https://imgix.ranker.com/user_node_img/50075/1001499181/original/tatooine-photo-u1?w=650&q=50&fm=pjpg&fit=crop&crop=faces
 	glClear(GL_DEPTH_BUFFER_BIT);
 
-	glm::mat4 sunTransformation = glm::translate(glm::vec3(0, -2, 0)) * glm::scale(glm::vec3(5));
+	//SUN
+	glm::mat4 sunTransformation = glm::scale(glm::vec3(5));
 	drawObjectColor(sphereContext, sunTransformation, glm::vec3(0.9, 0.9, 0.2), programSun);
-	//drawObjectColor(sphereContext, glm::translate(glm::vec3(cos(time)*2, 0, sin(time)*2)), glm::vec3(0.9, 0.9, 0.2));
 
-	glm::mat4 earthTransformation = glm::rotate(time, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(0, -2, 12.5));
-	//drawObjectColor(sphereContext, earthTransformation, glm::vec3(0.3, 0.8, 0.2), program);
+	//EARTH
+	glm::mat4 earthTransformation = glm::translate(glm::vec3(0, 0, 12.5)); // glm::rotate(time, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(0, 0, 12.5));
 	drawObjectTexture(sphereContext, earthTransformation, texture::earth, programTex);
-	//drawEarth(sphereContext, earthTransformation, texture::earth, texture::clouds);
-	//int arraytexturesSize = 2;
-	//GLuint textures[arraytexturesSize] = { texture::earth, texture::clouds };
-	//drawMultipleTextures(sphereContext, earthTransformation, arraytexturesSize, textures);
 
-	//transformation = transformation * scale(glm::vec3(0.5, 0.5, 0.5c
-
+	//MOON
 	glm::mat4 moonTransformation = earthTransformation * glm::rotate(time * 5, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(0, 0, 2)) * glm::scale(glm::vec3(0.5));
 	drawObjectColor(sphereContext, moonTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-
-	glm::mat4 marsTransformation = glm::rotate(time * 0.52f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(0, -2, -34)) * glm::scale(glm::vec3(0.8));
-	drawObjectColor(sphereContext, marsTransformation, glm::vec3(0.9, 0.3, 0.2), program);
-
-	glm::mat4 jupiterTransformation = glm::rotate(time / 12.f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(75, -2, -75)) * glm::scale(glm::vec3(2));
-	drawObjectColor(sphereContext, jupiterTransformation, glm::vec3(0.6, 0.6, 0.2), programProcTex);
-
-	glm::mat4 jupiterRingsTransformation = jupiterTransformation * glm::scale(glm::vec3(1.5, 0.1, 1.5));
-	drawObjectColor(sphereContext, jupiterRingsTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-
-
-	//ASTEROID BELTS	
-	glm::mat4 asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(34, -2, -34)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(0, 0, 1.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-34, -2, 34)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(0, 0, 1.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(48, -2, -0)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 0, 0));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-48, -2, 0)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 0, 0));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-47.7, -2, 6)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(0.5f, 0, 1.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-47.7, -2, -6)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(0.5f, 0, 1.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(47.7, -2, 6)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(0.5f, 0, 1.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(47.7, -2, -6)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(0.5f, 0, 1.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(39, -2, -27)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(-0.5f, 0, 3.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(39, -2, 27)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(-0.5f, 0, 3.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-39, -2, -27)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(-0.5f, 0, 3.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-39, -2, 27)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(-0.5f, 0, 3.0f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-31, -2, 36)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 2, 0.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-31, -2, -36)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 2, 0.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(31, -2, 36)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 2, 0.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(31, -2, -36)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 2, 0.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-46.56, -2, -12)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(7.0f, -1, 0.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(46.56, -2, -12)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(7.0f, -1, 0.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-46.56, -2, 12)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(7.0f, -1, 0.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(46.56, -2, 12)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(7.0f, -1, 0.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(44.58, -2, -18)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(-1.0f, 8, 5.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-44.58, -2, -18)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(-1.0f, 8, 5.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(44.58, -2, 18)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(-1.0f, 8, 5.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-44.58, -2, 18)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(-1.0f, 8, 5.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(41.66, -2, -24)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 2, -5.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(41.66, -2, 24)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 2, -5.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-41.66, -2, 24)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 2, -5.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-41.66, -2, -24)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 2, -5.23f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-37.57, -2, -30)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 0.5, -0.91f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(37.57, -2, -30)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 0.5, -0.91f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-37.57, -2, 30)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 0.5, -0.91f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-	asteroidBeltTransformation = glm::rotate(time * 0.4f, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(37.57, -2, 30)) * glm::scale(glm::vec3(0.4)) * glm::rotate(time * 2.f, glm::vec3(1.0f, 0.5, -0.91f));
-	drawObjectColor(asteroid, asteroidBeltTransformation, glm::vec3(0.8, 0.8, 0.8), program);
-
 
 	//SPACESHIP
 	glm::vec3 cameraSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
@@ -387,11 +272,20 @@ void renderScene(GLFWwindow* window)
 	glm::mat4 shipTransformation = glm::translate(spaceshipPos) * glm::rotate(0.f, glm::vec3(0, 1.0f, 0)) * glm::mat4({
 																														cameraSide.x,cameraSide.y,cameraSide.z,0,
 																														cameraUp.x,cameraUp.y,cameraUp.z ,0,
-																														-spaceshipDir.x,-spaceshipDir.y,-spaceshipDir.z,0,
+																														spaceshipDir.x,spaceshipDir.y,spaceshipDir.z,0,
 																														0.,0.,0.,1.,
 		});
-	//drawObjectColor(n_shipContext, shipTransformation, glm::vec3(0.1, 0.1, 0.9), program);
-	drawSpaceship(n_shipContext, shipTransformation, texture::ship, texture::scratches, texture::rust);
+	drawSpaceship(shipContext, shipTransformation, texture::ship, texture::scratches, texture::rust);
+
+	//SPOTLIGHT
+	glm::mat4 spotTransformation = glm::translate(spotPos) * glm::rotate(0.f, glm::vec3(0, 1.0f, 0)) * glm::mat4({
+																														cameraSide.x,cameraSide.y,cameraSide.z,0,
+																														cameraUp.x,cameraUp.y,cameraUp.z ,0,
+																														spotDir.x,spotDir.y,spotDir.z,0,
+																														0.,0.,0.,1.,
+		}
+	) * glm::scale(glm::vec3(0.2));
+	drawSpaceship(shipContext, spotTransformation, texture::ship, texture::scratches, texture::rust);
 
 
 	glUseProgram(0);
@@ -405,7 +299,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 void loadModelToContext(std::string path, Core::RenderContext& context)
 {
 	Assimp::Importer import;
-	const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_CalcTangentSpace);
+	const aiScene * scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_CalcTangentSpace);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
@@ -429,8 +323,6 @@ void init(GLFWwindow* window)
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
-	loadModelToContext("./models/LPP.obj", asteroid);
-	loadModelToContext("./models/cosmo black rtiger roblox os.obj", n_shipContext);
 
 	texture::earth = Core::LoadTexture("./textures/earth.png");
 	texture::clouds = Core::LoadTexture("./textures/clouds.jpg");
@@ -477,33 +369,23 @@ void processInput(GLFWwindow* window)
 		glfwSetWindowShouldClose(window, true);
 	}
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-		//cameraPos = cameraPos + (cameraDir * moveSpeed);
-		//spaceshipPos = cameraPos + 1.5 * cameraDir + glm::vec3(0, -0.5f, 0);
 		spaceshipPos = spaceshipPos + spaceshipDir * moveSpeed;
-		//cameraPos = spaceshipPos - 1.5 * spaceshipDir + glm::vec3(0, 0.5f, 0);
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-		//cameraPos -= cameraDir * moveSpeed;
 		spaceshipPos -= spaceshipDir * moveSpeed;
 	}
 	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
-		//cameraPos += cameraSide * moveSpeed;
 		spaceshipPos += spaceshipSide * moveSpeed;
 	}
 	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
-		//cameraPos -= cameraSide * moveSpeed;
 		spaceshipPos -= spaceshipSide * moveSpeed;
 	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-		//cameraDir = glm::vec3(glm::eulerAngleY(angleSpeed) * glm::vec4(cameraDir, 0));
 		spaceshipDir = glm::vec3(glm::eulerAngleY(angleSpeed) * glm::vec4(spaceshipDir, 0));
 	}
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-		//cameraDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(cameraDir, 0));
 		spaceshipDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(spaceshipDir, 0));
 	}
-	//spaceshipPos = cameraPos + 1.5 * cameraDir + glm::vec3(0, -0.5f, 0);
-	//spaceshipDir = cameraDir;
 	cameraPos = spaceshipPos - 1.5 * spaceshipDir + glm::vec3(0, 0.5f, 0);
 	cameraDir = spaceshipDir;
 
@@ -516,8 +398,8 @@ void processInput(GLFWwindow* window)
 		exp_param -= 10;
 	}
 
-	spotPos = spaceshipPos;
-	spotDir = spaceshipDir + glm::vec3(0, -0.1f, 0);
+	spotPos = spaceshipPos - glm::vec3(glm::normalize(spaceshipDir).x, -1.f, glm::normalize(spaceshipDir).z);
+	spotDir = spaceshipDir + glm::vec3(0, -0.5f, 0);
 }
 
 // funkcja jest glowna petla
