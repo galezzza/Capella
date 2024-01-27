@@ -43,6 +43,13 @@
     <None Include="shaders\shader_5_1_tex.vert" />
     <None Include="shaders\shader_5_sun.frag" />
     <None Include="shaders\shader_5_sun.vert" />
+    <None Include="shaders\shader_earth.frag" />
+    <None Include="shaders\shader_earth.geom" />
+    <None Include="shaders\shader_earth.vert" />
+    <None Include="shaders\shader_proc_tex.frag" />
+    <None Include="shaders\shader_proc_tex.vert" />
+    <None Include="shaders\shader_spaceship.frag" />
+    <None Include="shaders\shader_spaceship.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3952C396-B1C6-44CD-96DD-C1AC15D32978}</ProjectGuid>
@@ -56,14 +63,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

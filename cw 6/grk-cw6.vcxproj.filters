@@ -109,5 +109,26 @@
     <None Include="shaders\shader_5_1_tex.frag">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\shader_proc_tex.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_proc_tex.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_spaceship.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_spaceship.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_earth.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_earth.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_earth.geom">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

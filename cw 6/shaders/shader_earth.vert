@@ -13,7 +13,7 @@ out vec2 vVertexTexCoord;
 
 void main()
 {
-
+	//vec3 position = vertexPosition*vec3(1,2,1);
 	ioVertexNormal = (modelMatrix * vec4(vertexNormal, 0)).xyz;
 	ioVertexPosition = (modelMatrix * vec4(vertexPosition, 1)).xyz;
 	gl_Position = transformation * vec4(vertexPosition, 1.0);

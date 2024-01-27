@@ -23,6 +23,9 @@ namespace Core
 		GLuint CreateProgram(char* VertexShaderFilename,
 			char* FragmentShaderFilename);
 
+		GLuint CreateProgramWithGeometry(char* vertexShaderFilename,
+			char* geometryShaderFilename, char* fragmentShaderFilename);
+
 		void DeleteProgram(GLuint program);
 
 	};

@@ -28,6 +28,7 @@ GLuint programProcTex;
 Core::Shader_Loader shaderLoader;
 
 Core::RenderContext shipContext;
+Core::RenderContext hugeSphereContext;
 Core::RenderContext n_shipContext;
 Core::RenderContext sphereContext;
 Core::RenderContext asteroid;
@@ -51,6 +52,7 @@ glm::vec3 lightColor = glm::vec3(1);
 glm::vec3 lightDir = glm::vec3(1.0, 0.0, 0.0);
 
 float exp_param = 400.f;
+float spotLightOn = 1.0f;
 
 glm::vec3 spotPos = spaceshipPos;
 glm::vec3 spotDir = spaceshipDir + glm::vec3(0, -0.5f, 0.f);
@@ -67,7 +69,7 @@ namespace texture {
 	GLuint earthNormal;
 	GLuint asteroidNormal;
 	GLuint shipNormal;
-
+	
 	GLuint scratches;
 	GLuint rust;
 }
@@ -146,7 +148,7 @@ void drawObjectColor(Core::RenderContext& context, glm::mat4 modelMatrix, glm::v
 
 	Core::DrawContext(context);
 }
-void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID, GLuint programTex) {
+void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID, GLuint programTex){
 
 	glUseProgram(programTex);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
@@ -190,7 +192,7 @@ void drawEarth(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textu
 
 	Core::SetActiveTexture(textureID1, "colorTexture", programEarth, 0);
 	Core::SetActiveTexture(textureID2, "clouds", programEarth, 1);
-
+	
 
 	Core::DrawContext(context);
 }
@@ -208,6 +210,7 @@ void drawSpaceship(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint t
 	glUniform3f(glGetUniformLocation(programSpaceship, "lightPos"), 0, -2, 0);
 	glUniform1f(glGetUniformLocation(programSpaceship, "exp_param"), exp_param);
 
+
 	glUniform3f(glGetUniformLocation(programSpaceship, "spotPos"), spotPos.x, spotPos.y, spotPos.z);
 	glUniform3f(glGetUniformLocation(programSpaceship, "spotDir"), spotDir.x, spotDir.y, spotDir.z);
 	glUniform1f(glGetUniformLocation(programSpaceship, "angleAf"), angleAf);
@@ -215,7 +218,7 @@ void drawSpaceship(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint t
 	Core::SetActiveTexture(textureID1, "shipTexture", programSpaceship, 0);
 	Core::SetActiveTexture(textureID2, "scratches", programSpaceship, 1);
 	Core::SetActiveTexture(textureID3, "rust", programSpaceship, 2);
-
+	
 
 	Core::DrawContext(context);
 }
@@ -269,12 +272,12 @@ void renderScene(GLFWwindow* window)
 	//SPACESHIP
 	glm::vec3 cameraSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
 	glm::vec3 cameraUp = glm::normalize(glm::cross(cameraSide, spaceshipDir));
-	glm::mat4 shipTransformation = glm::translate(spaceshipPos) * glm::rotate(0.f, glm::vec3(0, 1.0f, 0)) * glm::mat4({
+	glm::mat4 shipTransformation = glm::translate(spaceshipPos) * glm::rotate(0.f, glm::vec3(0, 1.0f, 0)) * glm::mat4(	{
 																														cameraSide.x,cameraSide.y,cameraSide.z,0,
 																														cameraUp.x,cameraUp.y,cameraUp.z ,0,
 																														spaceshipDir.x,spaceshipDir.y,spaceshipDir.z,0,
 																														0.,0.,0.,1.,
-		});
+																														}	);
 	drawSpaceship(shipContext, shipTransformation, texture::ship, texture::scratches, texture::rust);
 
 	//SPOTLIGHT
@@ -299,7 +302,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 void loadModelToContext(std::string path, Core::RenderContext& context)
 {
 	Assimp::Importer import;
-	const aiScene * scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_CalcTangentSpace);
+	const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_CalcTangentSpace);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
@@ -317,12 +320,13 @@ void init(GLFWwindow* window)
 	program = shaderLoader.CreateProgram("shaders/shader_5_1.vert", "shaders/shader_5_1.frag");
 	programSun = shaderLoader.CreateProgram("shaders/shader_5_sun.vert", "shaders/shader_5_sun.frag");
 	programTex = shaderLoader.CreateProgram("shaders/shader_5_1_tex.vert", "shaders/shader_5_1_tex.frag");
-	programEarth = shaderLoader.CreateProgram("shaders/shader_earth.vert", "shaders/shader_earth.frag");
+	programEarth = shaderLoader.CreateProgramWithGeometry("shaders/shader_earth.vert", "shaders/shader_earth.geom", "shaders/shader_earth.frag");
 	programSpaceship = shaderLoader.CreateProgram("shaders/shader_spaceship.vert", "shaders/shader_spaceship.frag");
 	programProcTex = shaderLoader.CreateProgram("shaders/shader_proc_tex.vert", "shaders/shader_proc_tex.frag");
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
+	loadModelToContext("./models/uploads_files_82986_318400_polygon_sphere_100mm.STL", hugeSphereContext);
 
 	texture::earth = Core::LoadTexture("./textures/earth.png");
 	texture::clouds = Core::LoadTexture("./textures/clouds.jpg");
@@ -386,6 +390,14 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
 		spaceshipDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(spaceshipDir, 0));
 	}
+	if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
+		if (spotLightOn == 0.0f) {
+			spotLightOn = 1.0;
+		}
+		else {
+			spotLightOn = 0.0f;
+		}
+	}
 	cameraPos = spaceshipPos - 1.5 * spaceshipDir + glm::vec3(0, 0.5f, 0);
 	cameraDir = spaceshipDir;
 
@@ -399,7 +411,7 @@ void processInput(GLFWwindow* window)
 	}
 
 	spotPos = spaceshipPos - glm::vec3(glm::normalize(spaceshipDir).x, -1.f, glm::normalize(spaceshipDir).z);
-	spotDir = spaceshipDir + glm::vec3(0, -0.5f, 0);
+	spotDir = spotLightOn * (spaceshipDir + glm::vec3(0, -0.5f, 0));
 }
 
 // funkcja jest glowna petla

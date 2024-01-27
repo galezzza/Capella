@@ -91,7 +91,7 @@ void main()
 	
 	vec3 spotLightDir = ioVertexPosition - spotPos;
 	if (dot(normalize(spotLightDir), normalize(spotDir)) > cos(angleAf)){
-		combined_illumination = combined_illumination + get_color(spotLightDir, exp_param/5);
+		combined_illumination = combined_illumination + 0.01 * get_color(spotLightDir, exp_param/5);
 	}
 	out_color = vec4(tone_mapping(combined_illumination),1);
 }
