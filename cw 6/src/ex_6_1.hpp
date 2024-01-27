@@ -20,12 +20,10 @@
 /// fist commit
 /// </summary>
 
-GLuint program;
+GLuint programPBR;
+GLuint programEarthPBR;
 GLuint programSun;
-GLuint programTex;
-GLuint programEarth;
 GLuint programSpaceship;
-GLuint programProcTex;
 
 Core::Shader_Loader shaderLoader;
 
@@ -35,10 +33,10 @@ Core::RenderContext n_shipContext;
 Core::RenderContext sphereContext;
 Core::RenderContext asteroid;
 
-glm::vec3 cameraPos = glm::vec3(-20.f, 0, 10.f);
+glm::vec3 cameraPos = glm::vec3(-4000.f, 0, 10.f);
 glm::vec3 cameraDir = glm::vec3(1.f, -0.f, 0.f);
 
-glm::vec3 spaceshipPos = cameraPos + 1.5 * cameraDir + glm::vec3(0, -0.5f, 0);
+glm::vec3 spaceshipPos = cameraPos + 1.5 * cameraDir + glm::vec3(0, -2.5f, 0);
 glm::vec3 spaceshipDir = glm::vec3(1.f, -0.f, 0.f);
 GLuint VAO, VBO;
 
@@ -49,6 +47,12 @@ float deltaTime;
 
 float angleSpeed;
 float moveSpeed;
+
+float S = 8;
+float R = 1;
+
+const float maxS = 512;
+const float minS = 2;
 
 glm::vec3 lightColor = glm::vec3(1);
 glm::vec3 lightDir = glm::vec3(1.0, 0.0, 0.0);
@@ -74,6 +78,12 @@ namespace texture {
 	
 	GLuint scratches;
 	GLuint rust;
+}
+namespace rustediron2 {
+	GLuint albedo;
+	GLuint metallic;
+	GLuint normal;
+	GLuint roughness;
 }
 
 glm::mat4 createCameraMatrix()
@@ -150,54 +160,6 @@ void drawObjectColor(Core::RenderContext& context, glm::mat4 modelMatrix, glm::v
 
 	Core::DrawContext(context);
 }
-void drawObjectTexture(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID, GLuint programTex){
-
-	glUseProgram(programTex);
-	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
-	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
-	glUniformMatrix4fv(glGetUniformLocation(programTex, "transformation"), 1, GL_FALSE, (float*)&transformation);
-
-	glUniform3f(glGetUniformLocation(programTex, "lightDir"), lightDir.x, lightDir.y, lightDir.z);
-	glUniform3f(glGetUniformLocation(programTex, "lightColor"), lightColor.x, lightColor.y, lightColor.z);
-	glUniform3f(glGetUniformLocation(programTex, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
-
-	glUniformMatrix4fv(glGetUniformLocation(programTex, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
-	glUniform3f(glGetUniformLocation(programTex, "lightPos"), 0, -2, 0);
-	glUniform1f(glGetUniformLocation(programTex, "exp_param"), exp_param);
-
-	glUniform3f(glGetUniformLocation(programTex, "spotPos"), spotPos.x, spotPos.y, spotPos.z);
-	glUniform3f(glGetUniformLocation(programTex, "spotDir"), spotDir.x, spotDir.y, spotDir.z);
-	glUniform1f(glGetUniformLocation(programTex, "angleAf"), angleAf);
-	Core::SetActiveTexture(textureID, "colorTexture", programTex, 0);
-	Core::SetActiveTexture(texture::earthNormal, "normalSampler", programTex, 1);
-
-	Core::DrawContext(context);
-}
-void drawEarth(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID1, GLuint textureID2) {
-
-	glUseProgram(programEarth);
-	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
-	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
-	glUniformMatrix4fv(glGetUniformLocation(programEarth, "transformation"), 1, GL_FALSE, (float*)&transformation);
-
-	glUniform3f(glGetUniformLocation(programEarth, "lightDir"), lightDir.x, lightDir.y, lightDir.z);
-	glUniform3f(glGetUniformLocation(programEarth, "lightColor"), lightColor.x, lightColor.y, lightColor.z);
-	glUniform3f(glGetUniformLocation(programEarth, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
-
-	glUniformMatrix4fv(glGetUniformLocation(programEarth, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
-	glUniform3f(glGetUniformLocation(programEarth, "lightPos"), 0, -2, 0);
-	glUniform1f(glGetUniformLocation(programEarth, "exp_param"), exp_param);
-
-	glUniform3f(glGetUniformLocation(programEarth, "spotPos"), spotPos.x, spotPos.y, spotPos.z);
-	glUniform3f(glGetUniformLocation(programEarth, "spotDir"), spotDir.x, spotDir.y, spotDir.z);
-	glUniform1f(glGetUniformLocation(programEarth, "angleAf"), angleAf);
-
-	Core::SetActiveTexture(textureID1, "colorTexture", programEarth, 0);
-	Core::SetActiveTexture(textureID2, "clouds", programEarth, 1);
-	
-
-	Core::DrawContext(context);
-}
 void drawSpaceship(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureID1, GLuint textureID2, GLuint textureID3) {
 	glUseProgram(programSpaceship);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
@@ -220,32 +182,43 @@ void drawSpaceship(Core::RenderContext& context, glm::mat4 modelMatrix, GLuint t
 	Core::SetActiveTexture(textureID1, "shipTexture", programSpaceship, 0);
 	Core::SetActiveTexture(textureID2, "scratches", programSpaceship, 1);
 	Core::SetActiveTexture(textureID3, "rust", programSpaceship, 2);
+
 	
 
 	Core::DrawContext(context);
 }
-void drawObjectProc(Core::RenderContext& context, glm::mat4 modelMatrix, glm::vec3 color, GLuint program) {
+void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, glm::mat4 modelMatrix, GLuint textureAlbedo, GLuint textureNormal, GLuint textureMetallic, GLuint textureRoughness, GLuint textureAO) {
 
-	glUseProgram(program);
+	glUseProgram(programPBR);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
 	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
-	glUniformMatrix4fv(glGetUniformLocation(program, "transformation"), 1, GL_FALSE, (float*)&transformation);
-	glUniform3f(glGetUniformLocation(program, "color"), color.x, color.y, color.z);
+	glUniformMatrix4fv(glGetUniformLocation(programPBR, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(programPBR, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
 
-	glUniform3f(glGetUniformLocation(program, "lightDir"), lightDir.x, lightDir.y, lightDir.z);
-	glUniform3f(glGetUniformLocation(program, "lightColor"), lightColor.x, lightColor.y, lightColor.z);
-	glUniform3f(glGetUniformLocation(program, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	glUniform3f(glGetUniformLocation(programPBR, "lightPos"), 0, 0, 0);
+	//glUniform3f(glGetUniformLocation(programPBR, "lightDir"), lightDir.x, lightDir.y, lightDir.z);
+	//glUniform3f(glGetUniformLocation(programPBR, "lightColor"), lightColor.x, lightColor.y, lightColor.z);
+	glUniform3f(glGetUniformLocation(programPBR, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	
+	glUniform1f(glGetUniformLocation(programPBR, "exp_param"), exp_param);
+	glUniform1f(glGetUniformLocation(programPBR, "spotLightOn"), spotLightOn);
 
-	glUniformMatrix4fv(glGetUniformLocation(program, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
-	glUniform3f(glGetUniformLocation(program, "lightPos"), 0, -2, 0);
-	glUniform1f(glGetUniformLocation(program, "exp_param"), exp_param);
+	glUniform3f(glGetUniformLocation(programPBR, "spotPos"), spotPos.x, spotPos.y, spotPos.z);
+	glUniform3f(glGetUniformLocation(programPBR, "spotDir"), spotDir.x, spotDir.y, spotDir.z);
+	//glUniform1f(glGetUniformLocation(programPBR, "angleAf"), angleAf);
 
-	glUniform3f(glGetUniformLocation(program, "spotPos"), spotPos.x, spotPos.y, spotPos.z);
-	glUniform3f(glGetUniformLocation(program, "spotDir"), spotDir.x, spotDir.y, spotDir.z);
-	glUniform1f(glGetUniformLocation(program, "angleAf"), angleAf);
+
+
+	Core::SetActiveTexture(textureAlbedo, "textureAlbedo", programPBR, 0);
+	Core::SetActiveTexture(textureNormal, "textureNormal", programPBR, 1);
+	Core::SetActiveTexture(textureMetallic, "textureMetallic", programPBR, 2);
+	Core::SetActiveTexture(textureRoughness, "textureRoughness", programPBR, 3);
+	Core::SetActiveTexture(textureAO, "textureAO", programPBR, 4);
 
 	Core::DrawContext(context);
+
 }
+
 void renderScene(GLFWwindow* window)
 {
 	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
@@ -260,16 +233,14 @@ void renderScene(GLFWwindow* window)
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	//SUN
-	glm::mat4 sunTransformation = glm::scale(glm::vec3(5));
+	glm::mat4 sunTransformation = glm::scale(glm::vec3(120));
 	drawObjectColor(sphereContext, sunTransformation, glm::vec3(0.9, 0.9, 0.2), programSun);
 
-	//EARTH
-	glm::mat4 earthTransformation = glm::translate(glm::vec3(0, 0, 12.5)); // glm::rotate(time, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(0, 0, 12.5));
-	drawObjectTexture(sphereContext, earthTransformation, texture::earth, programTex);
-
-	//MOON
+	//PLANET
+	glm::mat4 earthTransformation = glm::rotate(float(time * 0.001), glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-2252.5, -2, 0)) * glm::scale(glm::vec3(25)) * glm::rotate(-float(time*0.125), glm::vec3(0, 1.0f, 0));
+	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+	
 	glm::mat4 moonTransformation = earthTransformation * glm::rotate(time * 5, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(0, 0, 2)) * glm::scale(glm::vec3(0.5));
-	drawObjectColor(sphereContext, moonTransformation, glm::vec3(0.8, 0.8, 0.8), program);
 
 	//SPACESHIP
 	glm::vec3 cameraSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
@@ -280,7 +251,8 @@ void renderScene(GLFWwindow* window)
 																														spaceshipDir.x,spaceshipDir.y,spaceshipDir.z,0,
 																														0.,0.,0.,1.,
 																														}	);
-	drawSpaceship(shipContext, shipTransformation, texture::ship, texture::scratches, texture::rust);
+	//drawSpaceship(shipContext, shipTransformation, texture::ship, texture::scratches, texture::rust);
+	drawObjectColorPBR(programPBR, shipContext, shipTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	//SPOTLIGHT
 	glm::mat4 spotTransformation = glm::translate(spotPos) * glm::rotate(0.f, glm::vec3(0, 1.0f, 0)) * glm::mat4({
@@ -319,16 +291,14 @@ void init(GLFWwindow* window)
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	glEnable(GL_DEPTH_TEST);
-	program = shaderLoader.CreateProgram("shaders/shader_5_1.vert", "shaders/shader_5_1.frag");
 	programSun = shaderLoader.CreateProgram("shaders/shader_5_sun.vert", "shaders/shader_5_sun.frag");
-	programTex = shaderLoader.CreateProgram("shaders/shader_5_1_tex.vert", "shaders/shader_5_1_tex.frag");
-	programEarth = shaderLoader.CreateProgramWithGeometry("shaders/shader_earth.vert", "shaders/shader_earth.geom", "shaders/shader_earth.frag");
+	programPBR = shaderLoader.CreateProgram("shaders/shader_PBR.vert", "shaders/shader_PBR.frag");
+	programEarthPBR = shaderLoader.CreateProgram("shaders/shader_earthPBR.vert", "shaders/shader_PBR.frag");
 	programSpaceship = shaderLoader.CreateProgram("shaders/shader_spaceship.vert", "shaders/shader_spaceship.frag");
-	programProcTex = shaderLoader.CreateProgram("shaders/shader_proc_tex.vert", "shaders/shader_proc_tex.frag");
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
-	loadModelToContext("./models/uploads_files_82986_318400_polygon_sphere_100mm.STL", hugeSphereContext);
+	loadModelToContext("./models/something.obj", hugeSphereContext);
 
 	texture::earth = Core::LoadTexture("./textures/earth.png");
 	texture::clouds = Core::LoadTexture("./textures/clouds.jpg");
@@ -340,31 +310,28 @@ void init(GLFWwindow* window)
 	texture::shipNormal = Core::LoadTexture("./textures/spaceship_normal.jpg");
 	texture::scratches = Core::LoadTexture("./textures/scratches.jpg");
 	texture::rust = Core::LoadTexture("./textures/rust.jpg");
+	rustediron2::albedo = Core::LoadTexture("./textures/rustediron1-alt2-bl/rustediron2_basecolor.png");
+	rustediron2::normal = Core::LoadTexture("./textures/rustediron1-alt2-bl/rustediron2_normal.png");
+	rustediron2::metallic = Core::LoadTexture("./textures/rustediron1-alt2-bl/rustediron2_metallic.png");
+	rustediron2::roughness = Core::LoadTexture("./textures/rustediron1-alt2-bl/rustediron2_roughness.png");
 }
 
 void shutdown(GLFWwindow* window)
 {
-	shaderLoader.DeleteProgram(program);
+	shaderLoader.DeleteProgram(programPBR);
+	shaderLoader.DeleteProgram(programEarthPBR);
 	shaderLoader.DeleteProgram(programSun);
-	shaderLoader.DeleteProgram(programTex);
-	shaderLoader.DeleteProgram(programEarth);
 	shaderLoader.DeleteProgram(programSpaceship);
-	shaderLoader.DeleteProgram(programProcTex);
 }
 
 //obsluga wejscia
 void processInput(GLFWwindow* window)
 {
-	//glm::vec3 cameraSide = glm::normalize(glm::cross(cameraDir, glm::vec3(0.f,1.f,0.f)));
 	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
-	//float angleSpeed = 0.05f;
-	//float moveSpeed = 0.5f;
 
 	float time = glfwGetTime();
 	deltaTime = time - lastFrameTime;
 	lastFrameTime = time;
-	const float S = 10;
-	const float R = 1;
 	float fps = 1 / deltaTime;
 
 	angleSpeed = R / fps;
@@ -391,6 +358,18 @@ void processInput(GLFWwindow* window)
 	}
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
 		spaceshipDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(spaceshipDir, 0));
+	}
+	if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
+		if (S < maxS){
+			S *= 2;
+		}
+		printf("%f\n", S);
+	}
+	if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) {
+		if (S > minS){
+			S /= 2;
+		}
+		printf("%f\n", S);
 	}
 	if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
 		if (spotLightOn == 0.0f) {
