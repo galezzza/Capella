@@ -112,5 +112,11 @@
     <None Include="shaders\shader_earthPBR.vert">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="shaders\shader_skybox.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_skybox.vert">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

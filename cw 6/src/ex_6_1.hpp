@@ -15,6 +15,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <string>
+#include "SOIL/SOIL.h"
 
 /// <summary>
 /// fist commit
@@ -24,6 +25,7 @@ GLuint programPBR;
 GLuint programEarthPBR;
 GLuint programSun;
 GLuint programSpaceship;
+GLuint programCubeMap;
 
 Core::Shader_Loader shaderLoader;
 
@@ -32,6 +34,7 @@ Core::RenderContext hugeSphereContext;
 Core::RenderContext n_shipContext;
 Core::RenderContext sphereContext;
 Core::RenderContext asteroid;
+Core::RenderContext cubeMapContex;
 
 glm::vec3 cameraPos = glm::vec3(-4000.f, 0, 10.f);
 glm::vec3 cameraDir = glm::vec3(1.f, -0.f, 0.f);
@@ -65,6 +68,7 @@ glm::vec3 spotDir = spaceshipDir + glm::vec3(0, -0.5f, 0.f);
 float angleAf = 3.14f / 2.f;
 
 namespace texture {
+	GLuint cubemap;
 	GLuint earth;
 	GLuint clouds;
 	GLuint moon;
@@ -230,6 +234,12 @@ void renderScene(GLFWwindow* window)
 	int* height = new int(0);
 	glfwGetWindowSize(window, width, height);
 
+	glUseProgram(programCubeMap);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix() * glm::translate(cameraPos);
+	transformation = viewProjectionMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programCubeMap, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture::cubemap);
+	Core::DrawContext(cubeMapContex);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	//SUN
@@ -295,10 +305,13 @@ void init(GLFWwindow* window)
 	programPBR = shaderLoader.CreateProgram("shaders/shader_PBR.vert", "shaders/shader_PBR.frag");
 	programEarthPBR = shaderLoader.CreateProgram("shaders/shader_earthPBR.vert", "shaders/shader_PBR.frag");
 	programSpaceship = shaderLoader.CreateProgram("shaders/shader_spaceship.vert", "shaders/shader_spaceship.frag");
+	programCubeMap = shaderLoader.CreateProgram("shaders/shader_skybox.vert", "shaders/shader_skybox.frag");
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
 	loadModelToContext("./models/something.obj", hugeSphereContext);
+	loadModelToContext("./models/cube.obj", cubeMapContex);
+
 
 	texture::earth = Core::LoadTexture("./textures/earth.png");
 	texture::clouds = Core::LoadTexture("./textures/clouds.jpg");
@@ -314,6 +327,36 @@ void init(GLFWwindow* window)
 	rustediron2::normal = Core::LoadTexture("./textures/rustediron1-alt2-bl/rustediron2_normal.png");
 	rustediron2::metallic = Core::LoadTexture("./textures/rustediron1-alt2-bl/rustediron2_metallic.png");
 	rustediron2::roughness = Core::LoadTexture("./textures/rustediron1-alt2-bl/rustediron2_roughness.png");
+
+	glGenTextures(1, &texture::cubemap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture::cubemap);
+
+	int w, h;
+	unsigned char* data;
+	std::vector<std::string> filepaths = {
+		//lf-___-___-___-front-___
+		"./textures/skybox/space_ft.png",
+		"./textures/skybox/space_bk.png",
+		"./textures/skybox/space_up.png",
+		"./textures/skybox/space_dn.png",
+		"./textures/skybox/space_rt.png",
+		"./textures/skybox/space_lf.png",
+	};
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		unsigned char* image = SOIL_load_image(filepaths[i].c_str(), &w, &h, 0, SOIL_LOAD_RGBA);
+		glTexImage2D(
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+			0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image
+		);
+
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	}
+
 }
 
 void shutdown(GLFWwindow* window)
@@ -322,6 +365,7 @@ void shutdown(GLFWwindow* window)
 	shaderLoader.DeleteProgram(programEarthPBR);
 	shaderLoader.DeleteProgram(programSun);
 	shaderLoader.DeleteProgram(programSpaceship);
+	shaderLoader.DeleteProgram(programCubeMap);
 }
 
 //obsluga wejscia

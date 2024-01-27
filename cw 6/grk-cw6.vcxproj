@@ -40,6 +40,8 @@
     <None Include="shaders\shader_5_sun.frag" />
     <None Include="shaders\shader_5_sun.vert" />
     <None Include="shaders\shader_earthPBR.vert" />
+    <None Include="shaders\shader_skybox.frag" />
+    <None Include="shaders\shader_skybox.vert" />
     <None Include="shaders\shader_spaceship.frag" />
     <None Include="shaders\shader_spaceship.vert" />
     <None Include="shaders\shader_PBR.frag" />
