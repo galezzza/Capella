@@ -16,7 +16,9 @@
 #include <assimp/postprocess.h>
 #include <string>
 
-
+/// <summary>
+/// fist commit
+/// </summary>
 
 GLuint program;
 GLuint programSun;
