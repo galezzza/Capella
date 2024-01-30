@@ -54,6 +54,11 @@ float moveSpeed;
 float S = 8;
 float R = 1;
 
+constexpr float PLANET_R = 125;
+constexpr float MOON_R = 12;
+constexpr float MOON_H = 200;
+float SPACESHIP_H = 5;
+
 const float maxS = 512;
 const float minS = 2;
 
@@ -89,6 +94,14 @@ namespace rustediron2 {
 	GLuint normal;
 	GLuint roughness;
 }
+
+enum class SceneType
+{
+	IN_SPACE, 
+	ON_PLANET,
+	NUM_SCENE_TYPES
+};
+SceneType currSceneType = SceneType::IN_SPACE;
 
 glm::mat4 createCameraMatrix()
 {
@@ -223,8 +236,59 @@ void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, glm::ma
 
 }
 
-void renderScene(GLFWwindow* window)
-{
+void renderOnPlanetScene(GLFWwindow* window) {
+	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glm::mat4 transformation;
+	float time = glfwGetTime();
+
+	int* width = new int(0);
+	int* height = new int(0);
+	glfwGetWindowSize(window, width, height);
+
+	glUseProgram(programCubeMap);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix() * glm::translate(cameraPos);
+	transformation = viewProjectionMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programCubeMap, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture::cubemap);
+	Core::DrawContext(cubeMapContex);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	//PLANET
+	glm::mat4 earthTransformation = glm::scale(glm::vec3(PLANET_R));
+	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+
+	//glm::mat4 moonTransformation = glm::translate(glm::vec3(PLANET_R + MOON_H, 0, 0)) * glm::scale(glm::vec3(MOON_R));
+	//drawObjectColorPBR(programEarthPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+	
+	//SPACESHIP
+	glm::vec3 cameraSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
+	glm::vec3 cameraUp = glm::normalize(glm::cross(cameraSide, spaceshipDir));
+	glm::mat4 shipTransformation = glm::translate(spaceshipPos) * glm::rotate(0.f, glm::vec3(0, 1.0f, 0)) * glm::mat4({
+																														cameraSide.x,cameraSide.y,cameraSide.z,0,
+																														cameraUp.x,cameraUp.y,cameraUp.z ,0,
+																														spaceshipDir.x,spaceshipDir.y,spaceshipDir.z,0,
+																														0.,0.,0.,1.,
+		});
+	//drawSpaceship(shipContext, shipTransformation, texture::ship, texture::scratches, texture::rust);
+	drawObjectColorPBR(programPBR, shipContext, shipTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+
+	//SPOTLIGHT
+	glm::mat4 spotTransformation = glm::translate(spotPos) * glm::rotate(0.f, glm::vec3(0, 1.0f, 0)) * glm::mat4({
+																														cameraSide.x,cameraSide.y,cameraSide.z,0,
+																														cameraUp.x,cameraUp.y,cameraUp.z ,0,
+																														spotDir.x,spotDir.y,spotDir.z,0,
+																														0.,0.,0.,1.,
+		}
+	) * glm::scale(glm::vec3(0.2));
+	drawSpaceship(shipContext, spotTransformation, texture::ship, texture::scratches, texture::rust);
+
+
+	glUseProgram(0);
+	glfwSwapBuffers(window);
+}
+
+void renderInSpaceScene(GLFWwindow* window) {
 	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glm::mat4 transformation;
@@ -247,20 +311,20 @@ void renderScene(GLFWwindow* window)
 	drawObjectColor(sphereContext, sunTransformation, glm::vec3(0.9, 0.9, 0.2), programSun);
 
 	//PLANET
-	glm::mat4 earthTransformation = glm::rotate(float(time * 0.001), glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-2252.5, -2, 0)) * glm::scale(glm::vec3(25)) * glm::rotate(-float(time*0.125), glm::vec3(0, 1.0f, 0));
+	glm::mat4 earthTransformation = glm::rotate(float(time * 0.001), glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-2252.5, -2, 0)) * glm::scale(glm::vec3(25)) * glm::rotate(-float(time * 0.125), glm::vec3(0, 1.0f, 0));
 	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
-	
+
 	glm::mat4 moonTransformation = earthTransformation * glm::rotate(time * 5, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(0, 0, 2)) * glm::scale(glm::vec3(0.5));
 
 	//SPACESHIP
 	glm::vec3 cameraSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
 	glm::vec3 cameraUp = glm::normalize(glm::cross(cameraSide, spaceshipDir));
-	glm::mat4 shipTransformation = glm::translate(spaceshipPos) * glm::rotate(0.f, glm::vec3(0, 1.0f, 0)) * glm::mat4(	{
+	glm::mat4 shipTransformation = glm::translate(spaceshipPos) * glm::rotate(0.f, glm::vec3(0, 1.0f, 0)) * glm::mat4({
 																														cameraSide.x,cameraSide.y,cameraSide.z,0,
 																														cameraUp.x,cameraUp.y,cameraUp.z ,0,
 																														spaceshipDir.x,spaceshipDir.y,spaceshipDir.z,0,
 																														0.,0.,0.,1.,
-																														}	);
+		});
 	//drawSpaceship(shipContext, shipTransformation, texture::ship, texture::scratches, texture::rust);
 	drawObjectColorPBR(programPBR, shipContext, shipTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
@@ -277,6 +341,22 @@ void renderScene(GLFWwindow* window)
 
 	glUseProgram(0);
 	glfwSwapBuffers(window);
+}
+
+void renderScene(GLFWwindow* window)
+{
+	switch (currSceneType)
+	{
+	case SceneType::IN_SPACE:
+		renderInSpaceScene(window);
+		break;
+	case SceneType::ON_PLANET:
+		renderOnPlanetScene(window);
+		break;
+	default:
+		renderInSpaceScene(window);
+		break;
+	}
 }
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -296,15 +376,47 @@ void loadModelToContext(std::string path, Core::RenderContext& context)
 	context.initFromAssimpMesh(scene->mMeshes[0]);
 }
 
+//To handle key just once
+// https://stackoverflow.com/questions/51873906/is-there-a-way-to-process-only-one-input-event-after-a-key-is-pressed-using-glfw
+void tab_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+		//switch to next scene type
+		currSceneType = SceneType((int(currSceneType) + 1) % int(SceneType::NUM_SCENE_TYPES));
+		spaceshipPos = glm::vec3(1 * PLANET_R + SPACESHIP_H, 0, 0);
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
+		if (S < maxS) {
+			S *= 2;
+		}
+		printf("%f\n", S);
+	}
+	if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) {
+		if (S > minS) {
+			S /= 2;
+		}
+		printf("%f\n", S);
+	}
+	if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
+		if (spotLightOn == 0.0f) {
+			spotLightOn = 1.0;
+		}
+		else {
+			spotLightOn = 0.0f;
+		}
+	}
+}
+
 void init(GLFWwindow* window)
 {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	glEnable(GL_DEPTH_TEST);
 	programSun = shaderLoader.CreateProgram("shaders/shader_5_sun.vert", "shaders/shader_5_sun.frag");
-	programPBR = shaderLoader.CreateProgram("shaders/shader_PBR.vert", "shaders/shader_PBR.frag");
-	programEarthPBR = shaderLoader.CreateProgram("shaders/shader_earthPBR.vert", "shaders/shader_PBR.frag");
-	programSpaceship = shaderLoader.CreateProgram("shaders/shader_spaceship.vert", "shaders/shader_spaceship.frag");
+	programPBR = shaderLoader.CreateProgram("shaders/shader_PBR_test.vert", "shaders/shader_PBR_test.frag");
+	programEarthPBR = shaderLoader.CreateProgram("shaders/shader_earthPBR_test.vert", "shaders/shader_PBR_test.frag");
+	programSpaceship = shaderLoader.CreateProgram("shaders/shader_spaceship.vert", "shaders/shader_spaceship_test.frag");
 	programCubeMap = shaderLoader.CreateProgram("shaders/shader_skybox.vert", "shaders/shader_skybox.frag");
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
@@ -357,6 +469,7 @@ void init(GLFWwindow* window)
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	}
 
+	glfwSetKeyCallback(window, tab_key_callback);
 }
 
 void shutdown(GLFWwindow* window)
@@ -368,28 +481,28 @@ void shutdown(GLFWwindow* window)
 	shaderLoader.DeleteProgram(programCubeMap);
 }
 
-//obsluga wejscia
-void processInput(GLFWwindow* window)
-{
-	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
+void printSpaceshipPos() {
+	std::cout
+		<< spaceshipPos.x << ", "
+		<< spaceshipPos.y << ", "
+		<< spaceshipPos.z
+		<< std::endl;
+}
 
-	float time = glfwGetTime();
-	deltaTime = time - lastFrameTime;
-	lastFrameTime = time;
-	float fps = 1 / deltaTime;
+void onPlanetProcessInput(GLFWwindow* window) {
+	glm::vec3 planetCenter = glm::vec3(0.f, 0.f, 0.f);
+	glm::vec3 spaceshipN = glm::normalize(spaceshipPos - planetCenter);
 
-	angleSpeed = R / fps;
-	moveSpeed = S / fps;
-
-
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, true);
-	}
+	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, spaceshipN));
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		spaceshipPos = spaceshipPos + spaceshipDir * moveSpeed;
+
+		printSpaceshipPos();
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
 		spaceshipPos -= spaceshipDir * moveSpeed;
+
+		printSpaceshipPos();
 	}
 	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
 		spaceshipPos += spaceshipSide * moveSpeed;
@@ -403,26 +516,69 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
 		spaceshipDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(spaceshipDir, 0));
 	}
-	if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
-		if (S < maxS){
-			S *= 2;
-		}
-		printf("%f\n", S);
+
+	cameraPos = spaceshipPos - 1.5 * spaceshipDir + glm::vec3(0, 0.5f, 0);
+	cameraDir = spaceshipDir;
+
+	//cameraDir = glm::normalize(-cameraPos);
+
+	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+		exp_param += 10;
 	}
-	if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS) {
-		if (S > minS){
-			S /= 2;
-		}
-		printf("%f\n", S);
+	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+		exp_param -= 10;
 	}
-	if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
-		if (spotLightOn == 0.0f) {
-			spotLightOn = 1.0;
-		}
-		else {
-			spotLightOn = 0.0f;
-		}
+
+	spotPos = spaceshipPos - glm::vec3(glm::normalize(spaceshipDir).x, -1.f, glm::normalize(spaceshipDir).z);
+	spotDir = spotLightOn * (spaceshipDir + glm::vec3(0, -0.5f, 0));
+}
+
+//obsluga wejscia
+void processInput(GLFWwindow* window)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+		glfwSetWindowShouldClose(window, true);
 	}
+
+	if (currSceneType == SceneType::ON_PLANET) {
+		onPlanetProcessInput(window);
+		return;
+	}
+
+	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
+
+	float time = glfwGetTime();
+	deltaTime = time - lastFrameTime;
+	lastFrameTime = time;
+	float fps = 1 / deltaTime;
+
+	angleSpeed = R / fps;
+	moveSpeed = S / fps;
+
+	
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+		spaceshipPos = spaceshipPos + spaceshipDir * moveSpeed;
+
+		printSpaceshipPos();
+	}
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+		spaceshipPos -= spaceshipDir * moveSpeed;
+
+		printSpaceshipPos();
+	}
+	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+		spaceshipPos += spaceshipSide * moveSpeed;
+	}
+	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+		spaceshipPos -= spaceshipSide * moveSpeed;
+	}
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+		spaceshipDir = glm::vec3(glm::eulerAngleY(angleSpeed) * glm::vec4(spaceshipDir, 0));
+	}
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+		spaceshipDir = glm::vec3(glm::eulerAngleY(-angleSpeed) * glm::vec4(spaceshipDir, 0));
+	}
+	
 	cameraPos = spaceshipPos - 1.5 * spaceshipDir + glm::vec3(0, 0.5f, 0);
 	cameraDir = spaceshipDir;
 
