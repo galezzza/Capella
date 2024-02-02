@@ -80,6 +80,9 @@ glm::vec3 spotPos = spaceshipPos;
 glm::vec3 spotDir = spaceshipDir + glm::vec3(0, -0.5f, 0.f);
 float angleAf = 3.14f / 2.f;
 
+constexpr int NUM_CURVE_POINTS = 30000;
+std::vector<glm::vec3> curve_points;
+
 namespace texture {
 	GLuint cubemap;
 	GLuint earth;
@@ -107,6 +110,7 @@ enum class SceneType
 {
 	IN_SPACE, 
 	ON_PLANET,
+	CURVE_FLY,
 	NUM_SCENE_TYPES
 };
 SceneType currSceneType = SceneType::IN_SPACE;
@@ -257,6 +261,65 @@ void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, glm::ma
 
 }
 
+int currCurvePoint = 0;
+float desiredCurveDuration = 40.;
+void renderCurveFlyScene(GLFWwindow* window) {
+	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glm::mat4 transformation;
+	float time = glfwGetTime();
+
+	glUseProgram(programCubeMap);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix() * glm::translate(cameraPos);
+	transformation = viewProjectionMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(programCubeMap, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture::cubemap);
+	Core::DrawContext(cubeMapContex);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	//TODO
+	//move to scene switching func
+	cameraPos = glm::vec3(0, 0, 30.f);
+	cameraDir = glm::normalize(glm::vec3(0, 0, -1.0));
+
+	//PLANET
+	//glm::mat4 earthTransformation = glm::scale(glm::vec3(PLANET_R));
+	//earthPosWor = glm::vec3(earthTransformation * glm::vec4(0, 0, 0, 1));
+	//earth_r = PLANET_R;
+	//drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+
+	int step = 1;
+	//in case of lag or debug deltaTime can be big and cause zero-devision
+	if (desiredCurveDuration > deltaTime) {
+		step = glm::max(NUM_CURVE_POINTS / int((desiredCurveDuration / deltaTime)), 1);
+	}
+	//CURVE HANDLING
+	glm::vec3 curr = curve_points[currCurvePoint];
+	// to prevent index out of range
+	glm::vec3 next = curve_points[glm::min(currCurvePoint + step, NUM_CURVE_POINTS - 1)];
+	spaceshipPos = curr;
+	spaceshipDir = - glm::normalize(curr - next);
+	glm::vec3 spaceshipSide = glm::normalize(glm::vec3(curr.x, curr.y, 0));//dir to curve rotation axis
+	glm::vec3 spaceshipUp = glm::normalize(glm::cross(spaceshipSide, spaceshipDir));
+
+	//SPACESHIP
+	
+	glm::mat4 shipTransformation = glm::translate(spaceshipPos)
+		* glm::mat4({
+			spaceshipSide.x,spaceshipSide.y,spaceshipSide.z,0,
+			spaceshipUp.x,spaceshipUp.y,spaceshipUp.z ,0,
+			spaceshipDir.x,spaceshipDir.y,spaceshipDir.z,0,
+			0.,0.,0.,1.,
+			})
+		* glm::scale(glm::vec3(2));
+	drawObjectColorPBR(programPBR, shipContext, shipTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+
+	currCurvePoint = (currCurvePoint + step) % (NUM_CURVE_POINTS - 1);
+
+	glUseProgram(0);
+	glfwSwapBuffers(window);
+}
+
 void renderOnPlanetScene(GLFWwindow* window) {
 	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -317,10 +380,6 @@ void renderInSpaceScene(GLFWwindow* window) {
 	glm::mat4 transformation;
 	float time = glfwGetTime();
 
-	int* width = new int(0);
-	int* height = new int(0);
-	glfwGetWindowSize(window, width, height);
-
 	glUseProgram(programCubeMap);
 	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix() * glm::translate(cameraPos);
 	transformation = viewProjectionMatrix;
@@ -377,6 +436,9 @@ void renderScene(GLFWwindow* window)
 		break;
 	case SceneType::ON_PLANET:
 		renderOnPlanetScene(window);
+		break;
+	case SceneType::CURVE_FLY:
+		renderCurveFlyScene(window);
 		break;
 	default:
 		renderInSpaceScene(window);
@@ -485,12 +547,12 @@ glm::vec3 screenCoord2WordVec(float xpos, double ypos) {
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if (currSceneType != SceneType::ON_PLANET) {
+	if (currSceneType == SceneType::IN_SPACE) {
 		if (glm::length(cameraPos - earthPosWor) < 1500) {
 			addGlow = checkIntersection(screenCoord2WordVec(xpos, ypos));
-		} else {
-			addGlow = false;
 		}
+	} else {
+		addGlow = false;
 	}
 }
 
@@ -511,22 +573,25 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 }
 
 void generateSimple3dCurve() {
-	constexpr int NUM_POINTS = 100;
 	// Curve from https://matplotlib.org/stable/gallery/mplot3d/lines3d.html
-	constexpr float z_init = 0;
-	constexpr float z_step = 10.f / NUM_POINTS;
-	constexpr float theta_init = 0;
-	constexpr float theta_step = 4 * glm::pi<float>() / NUM_POINTS;
+	constexpr float zScale = 10.f;
+	constexpr float rScale = 3.f;
+	constexpr float z_init = -2;
+	constexpr float z_end = 2;
+	constexpr float z_step = (z_end - z_init) / NUM_CURVE_POINTS;
+	constexpr float theta_init = -4 * glm::pi<float>();
+	constexpr float theta_end = 4 * glm::pi<float>();
+	constexpr float theta_step = (theta_end - theta_init) / NUM_CURVE_POINTS;
 
-	std::vector<glm::vec3> points;
-	for (int i = 0; i < NUM_POINTS; i++) {
+	for (int i = 0; i < NUM_CURVE_POINTS; i++) {
 		float z = z_init + z_step * i;
 		float theta = theta_init + theta_step * i;
-		float r = pow(z, 2) + 1;
+		float r = rScale * (pow(z, 2) + 1);
 		float x = r * glm::sin(theta);
 		float y = r * glm::cos(theta);
-		points.push_back(glm::vec3(x, y, z));
+		curve_points.push_back(glm::vec3(x, y, z * zScale));
 	}
+
 }
 
 void init(GLFWwindow* window)
@@ -672,6 +737,10 @@ void processInput(GLFWwindow* window)
 
 	if (currSceneType == SceneType::ON_PLANET) {
 		onPlanetProcessInput(window);
+		return;
+	}
+
+	if (currSceneType == SceneType::CURVE_FLY) {
 		return;
 	}
 
