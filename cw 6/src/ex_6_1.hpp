@@ -59,6 +59,8 @@ constexpr float MOON_R = 12;
 constexpr float MOON_H = 200;
 float SPACESHIP_H = 5;
 
+float msf = MOON_R;
+
 const float maxS = 512;
 const float minS = 2;
 
@@ -102,6 +104,14 @@ enum class SceneType
 	NUM_SCENE_TYPES
 };
 SceneType currSceneType = SceneType::IN_SPACE;
+
+void printVec3(glm::vec3 v) {
+	std::cout
+		<< v.x << ", "
+		<< v.y << ", "
+		<< v.z
+		<< std::endl;
+}
 
 glm::mat4 createCameraMatrix()
 {
@@ -258,8 +268,8 @@ void renderOnPlanetScene(GLFWwindow* window) {
 	glm::mat4 earthTransformation = glm::scale(glm::vec3(PLANET_R));
 	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
-	//glm::mat4 moonTransformation = glm::translate(glm::vec3(PLANET_R + MOON_H, 0, 0)) * glm::scale(glm::vec3(MOON_R));
-	//drawObjectColorPBR(programEarthPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+	glm::mat4 moonTransformation = glm::translate(glm::vec3(PLANET_R, 0, 0)) * glm::scale(glm::vec3(msf));
+	drawObjectColorPBR(programEarthPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 	
 	//SPACESHIP
 	glm::vec3 cameraSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
@@ -378,7 +388,7 @@ void loadModelToContext(std::string path, Core::RenderContext& context)
 
 //To handle key just once
 // https://stackoverflow.com/questions/51873906/is-there-a-way-to-process-only-one-input-event-after-a-key-is-pressed-using-glfw
-void tab_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
 		//switch to next scene type
@@ -406,11 +416,66 @@ void tab_key_callback(GLFWwindow* window, int key, int scancode, int action, int
 			spotLightOn = 0.0f;
 		}
 	}
+
+	//DEBUG
+	if (key == GLFW_KEY_T && action == GLFW_PRESS) {
+		msf /= 1.2;
+	}
+}
+
+float dfLine(glm::vec3 O, glm::vec3 dir, glm::vec3 P) {
+	float dot_res = glm::dot(P - O, dir);
+	glm::vec3 X = O + dir * dot_res;
+	return glm::distance(P, X);
+}
+
+bool checkIntersection(glm::vec3 ray) {
+	glm::vec3 p_center = glm::vec3(0);
+	float distance = dfLine(cameraPos, ray, p_center);
+	std::cout << "distance: " << distance << std::endl;
+	return distance < PLANET_R;
+}
+
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	double xpos, ypos;
+	glfwGetCursorPos(window, &xpos, &ypos);
+	
+	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
+		int width, height;
+		// The window size is in screen coordinates, not pixels.
+		//glfwGetWindowSize(window, &width, &height); 
+		// In pixels
+		glfwGetFramebufferSize(window, &width, &height);
+
+		// https://antongerdelan.net/opengl/raycasting.html
+		glm::mat4 perspectiveM = createPerspectiveMatrix();
+		glm::mat4 camM = createCameraMatrix();
+		// Clip Space (Normalised Device Coordinates)
+		glm::vec2 ray_nds = glm::vec2(2 * xpos / width - 1, -(2 * ypos / height - 1));
+		glm::vec4 ray_clip = glm::vec4(ray_nds.x, ray_nds.y, -1.0, 1.0);
+		// View space (Eye/Camera coordinates)
+		// Only needed to un-project the x,y part, 
+		//  set the z,w part to mean "forwards, and not a point". 
+		glm::vec4 ray_eye = glm::inverse(perspectiveM) * ray_clip;
+		ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+		// World Space
+		glm::vec3 ray_wor = glm::vec3(glm::inverse(camM) * ray_eye);
+		ray_wor = glm::normalize(ray_wor);
+
+		printf("%f,%f\n", ray_nds.x, ray_nds.y);
+		printVec3(ray_wor);
+
+		if (checkIntersection(ray_wor)) {
+			std::cout << "clicked" << std::endl;
+		}
+	}
 }
 
 void init(GLFWwindow* window)
 {
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
 
 	glEnable(GL_DEPTH_TEST);
 	programSun = shaderLoader.CreateProgram("shaders/shader_5_sun.vert", "shaders/shader_5_sun.frag");
@@ -469,7 +534,7 @@ void init(GLFWwindow* window)
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	}
 
-	glfwSetKeyCallback(window, tab_key_callback);
+	glfwSetKeyCallback(window, key_callback);
 }
 
 void shutdown(GLFWwindow* window)
@@ -481,14 +546,6 @@ void shutdown(GLFWwindow* window)
 	shaderLoader.DeleteProgram(programCubeMap);
 }
 
-void printSpaceshipPos() {
-	std::cout
-		<< spaceshipPos.x << ", "
-		<< spaceshipPos.y << ", "
-		<< spaceshipPos.z
-		<< std::endl;
-}
-
 void onPlanetProcessInput(GLFWwindow* window) {
 	glm::vec3 planetCenter = glm::vec3(0.f, 0.f, 0.f);
 	glm::vec3 spaceshipN = glm::normalize(spaceshipPos - planetCenter);
@@ -497,12 +554,12 @@ void onPlanetProcessInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		spaceshipPos = spaceshipPos + spaceshipDir * moveSpeed;
 
-		printSpaceshipPos();
+		printVec3(spaceshipPos);
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
 		spaceshipPos -= spaceshipDir * moveSpeed;
 
-		printSpaceshipPos();
+		printVec3(spaceshipPos);
 	}
 	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
 		spaceshipPos += spaceshipSide * moveSpeed;
@@ -540,13 +597,6 @@ void processInput(GLFWwindow* window)
 		glfwSetWindowShouldClose(window, true);
 	}
 
-	if (currSceneType == SceneType::ON_PLANET) {
-		onPlanetProcessInput(window);
-		return;
-	}
-
-	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
-
 	float time = glfwGetTime();
 	deltaTime = time - lastFrameTime;
 	lastFrameTime = time;
@@ -555,16 +605,23 @@ void processInput(GLFWwindow* window)
 	angleSpeed = R / fps;
 	moveSpeed = S / fps;
 
+	if (currSceneType == SceneType::ON_PLANET) {
+		onPlanetProcessInput(window);
+		return;
+	}
+
+	glm::vec3 spaceshipSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
+
 	
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		spaceshipPos = spaceshipPos + spaceshipDir * moveSpeed;
 
-		printSpaceshipPos();
+		printVec3(spaceshipPos);
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
 		spaceshipPos -= spaceshipDir * moveSpeed;
 
-		printSpaceshipPos();
+		printVec3(spaceshipPos);
 	}
 	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
 		spaceshipPos += spaceshipSide * moveSpeed;
