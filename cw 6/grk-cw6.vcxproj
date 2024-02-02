@@ -40,12 +40,16 @@
     <None Include="shaders\shader_5_sun.frag" />
     <None Include="shaders\shader_5_sun.vert" />
     <None Include="shaders\shader_earthPBR.vert" />
+    <None Include="shaders\shader_earthPBR_test.vert" />
+    <None Include="shaders\shader_PBR_test.frag" />
+    <None Include="shaders\shader_PBR_test.vert" />
     <None Include="shaders\shader_skybox.frag" />
     <None Include="shaders\shader_skybox.vert" />
     <None Include="shaders\shader_spaceship.frag" />
     <None Include="shaders\shader_spaceship.vert" />
     <None Include="shaders\shader_PBR.frag" />
     <None Include="shaders\shader_PBR.vert" />
+    <None Include="shaders\shader_spaceship_test.frag" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3952C396-B1C6-44CD-96DD-C1AC15D32978}</ProjectGuid>
