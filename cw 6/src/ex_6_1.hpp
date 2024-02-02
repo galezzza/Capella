@@ -21,6 +21,8 @@
 /// fist commit
 /// </summary>
 
+int winWidth, winHeight;
+
 GLuint programPBR;
 GLuint programEarthPBR;
 GLuint programSun;
@@ -54,12 +56,16 @@ float moveSpeed;
 float S = 8;
 float R = 1;
 
+glm::vec3 earthPosWor;
+float earth_r;
 constexpr float PLANET_R = 125;
 constexpr float MOON_R = 12;
 constexpr float MOON_H = 200;
 float SPACESHIP_H = 5;
 
 float msf = MOON_R;
+
+bool addGlow = false;
 
 const float maxS = 512;
 const float minS = 2;
@@ -234,6 +240,11 @@ void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, glm::ma
 	glUniform3f(glGetUniformLocation(programPBR, "spotDir"), spotDir.x, spotDir.y, spotDir.z);
 	//glUniform1f(glGetUniformLocation(programPBR, "angleAf"), angleAf);
 
+	glm::vec3 glowColor = glm::vec3(-1);
+	if (addGlow && programPBR == programEarthPBR) {
+		glowColor = glm::vec3(0, 1, 0);
+	}
+	glUniform3f(glGetUniformLocation(programPBR, "glowColor"), glowColor.r, glowColor.g, glowColor.b);
 
 
 	Core::SetActiveTexture(textureAlbedo, "textureAlbedo", programPBR, 0);
@@ -266,10 +277,12 @@ void renderOnPlanetScene(GLFWwindow* window) {
 
 	//PLANET
 	glm::mat4 earthTransformation = glm::scale(glm::vec3(PLANET_R));
+	earthPosWor = glm::vec3(earthTransformation * glm::vec4(0, 0, 0, 1));
+	earth_r = PLANET_R;
 	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
-	glm::mat4 moonTransformation = glm::translate(glm::vec3(PLANET_R, 0, 0)) * glm::scale(glm::vec3(msf));
-	drawObjectColorPBR(programEarthPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+	//glm::mat4 moonTransformation = glm::translate(glm::vec3(PLANET_R, 0, 0)) * glm::scale(glm::vec3(msf));
+	//drawObjectColorPBR(programEarthPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 	
 	//SPACESHIP
 	glm::vec3 cameraSide = glm::normalize(glm::cross(spaceshipDir, glm::vec3(0.f, 1.f, 0.f)));
@@ -322,6 +335,8 @@ void renderInSpaceScene(GLFWwindow* window) {
 
 	//PLANET
 	glm::mat4 earthTransformation = glm::rotate(float(time * 0.001), glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(-2252.5, -2, 0)) * glm::scale(glm::vec3(25)) * glm::rotate(-float(time * 0.125), glm::vec3(0, 1.0f, 0));
+	earthPosWor = glm::vec3(earthTransformation * glm::vec4(0, 0, 0, 1));
+	earth_r = 25;
 	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	glm::mat4 moonTransformation = earthTransformation * glm::rotate(time * 5, glm::vec3(0, 1.0f, 0)) * glm::translate(glm::vec3(0, 0, 2)) * glm::scale(glm::vec3(0.5));
@@ -370,6 +385,8 @@ void renderScene(GLFWwindow* window)
 }
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
+	winWidth = width;
+	winHeight = height;
 	aspectRatio = width / float(height);
 	glViewport(0, 0, width, height);
 }
@@ -390,6 +407,7 @@ void loadModelToContext(std::string path, Core::RenderContext& context)
 // https://stackoverflow.com/questions/51873906/is-there-a-way-to-process-only-one-input-event-after-a-key-is-pressed-using-glfw
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	//DEBUG
 	if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
 		//switch to next scene type
 		currSceneType = SceneType((int(currSceneType) + 1) % int(SceneType::NUM_SCENE_TYPES));
@@ -423,17 +441,57 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
-float dfLine(glm::vec3 O, glm::vec3 dir, glm::vec3 P) {
-	float dot_res = glm::dot(P - O, dir);
-	glm::vec3 X = O + dir * dot_res;
-	return glm::distance(P, X);
+bool checkIntersection(glm::vec3 ray_dir) {
+	glm::vec3 p_center = earthPosWor;
+	glm::vec3 O = cameraPos;
+	glm::vec3 P = p_center;
+	float dot_res = glm::dot(P - O, ray_dir);
+
+	//angle > 90
+	if (dot_res < 0) {
+		return false;
+	}
+
+	glm::vec3 X = O + ray_dir * dot_res;
+	float distance = glm::distance(P, X);
+	//float distance = dfLine(cameraPos, ray_dir, p_center);
+	
+	std::cout << "distance: " << distance << std::endl;
+	return distance < earth_r;
 }
 
-bool checkIntersection(glm::vec3 ray) {
-	glm::vec3 p_center = glm::vec3(0);
-	float distance = dfLine(cameraPos, ray, p_center);
-	std::cout << "distance: " << distance << std::endl;
-	return distance < PLANET_R;
+glm::vec3 screenCoord2WordVec(float xpos, double ypos) {
+	// https://antongerdelan.net/opengl/raycasting.html
+	glm::mat4 perspectiveM = createPerspectiveMatrix();
+	glm::mat4 camM = createCameraMatrix();
+	// Clip Space (Normalised Device Coordinates)
+	glm::vec2 ray_nds = glm::vec2(2 * xpos / winWidth - 1, -(2 * ypos / winHeight - 1));
+	glm::vec4 ray_clip = glm::vec4(ray_nds.x, ray_nds.y, -1.0, 1.0);
+	// View space (Eye/Camera coordinates)
+	// Only needed to un-project the x,y part, 
+	//  set the z,w part to mean "forwards, and not a point". 
+	glm::vec4 ray_eye = glm::inverse(perspectiveM) * ray_clip;
+	ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
+	// World Space
+	glm::vec3 ray_wor = glm::vec3(glm::inverse(camM) * ray_eye);
+	ray_wor = glm::normalize(ray_wor);
+
+	//DEBUG
+	//printf("%f,%f\n", ray_nds.x, ray_nds.y);
+	//printVec3(ray_wor);
+
+	return ray_wor;
+}
+
+void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	if (currSceneType != SceneType::ON_PLANET) {
+		if (glm::length(cameraPos - earthPosWor) < 1500) {
+			addGlow = checkIntersection(screenCoord2WordVec(xpos, ypos));
+		} else {
+			addGlow = false;
+		}
+	}
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
@@ -442,39 +500,46 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	glfwGetCursorPos(window, &xpos, &ypos);
 	
 	if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
-		int width, height;
-		// The window size is in screen coordinates, not pixels.
-		//glfwGetWindowSize(window, &width, &height); 
-		// In pixels
-		glfwGetFramebufferSize(window, &width, &height);
-
-		// https://antongerdelan.net/opengl/raycasting.html
-		glm::mat4 perspectiveM = createPerspectiveMatrix();
-		glm::mat4 camM = createCameraMatrix();
-		// Clip Space (Normalised Device Coordinates)
-		glm::vec2 ray_nds = glm::vec2(2 * xpos / width - 1, -(2 * ypos / height - 1));
-		glm::vec4 ray_clip = glm::vec4(ray_nds.x, ray_nds.y, -1.0, 1.0);
-		// View space (Eye/Camera coordinates)
-		// Only needed to un-project the x,y part, 
-		//  set the z,w part to mean "forwards, and not a point". 
-		glm::vec4 ray_eye = glm::inverse(perspectiveM) * ray_clip;
-		ray_eye = glm::vec4(ray_eye.x, ray_eye.y, -1.0, 0.0);
-		// World Space
-		glm::vec3 ray_wor = glm::vec3(glm::inverse(camM) * ray_eye);
-		ray_wor = glm::normalize(ray_wor);
-
-		printf("%f,%f\n", ray_nds.x, ray_nds.y);
-		printVec3(ray_wor);
-
-		if (checkIntersection(ray_wor)) {
-			std::cout << "clicked" << std::endl;
+		if (addGlow) {
+			//switch to ON_PLANET
+			currSceneType = SceneType::ON_PLANET;
+			spaceshipPos = glm::vec3(1 * PLANET_R + SPACESHIP_H, 0, 0);
+			spaceshipDir = glm::normalize(- spaceshipPos);
+			addGlow = false;
 		}
+	}
+}
+
+void generateSimple3dCurve() {
+	constexpr int NUM_POINTS = 100;
+	// Curve from https://matplotlib.org/stable/gallery/mplot3d/lines3d.html
+	constexpr float z_init = 0;
+	constexpr float z_step = 10.f / NUM_POINTS;
+	constexpr float theta_init = 0;
+	constexpr float theta_step = 4 * glm::pi<float>() / NUM_POINTS;
+
+	std::vector<glm::vec3> points;
+	for (int i = 0; i < NUM_POINTS; i++) {
+		float z = z_init + z_step * i;
+		float theta = theta_init + theta_step * i;
+		float r = pow(z, 2) + 1;
+		float x = r * glm::sin(theta);
+		float y = r * glm::cos(theta);
+		points.push_back(glm::vec3(x, y, z));
 	}
 }
 
 void init(GLFWwindow* window)
 {
+	generateSimple3dCurve();
+
+	// The window size is in screen coordinates, not pixels.
+	//glfwGetWindowSize(window, &width, &height); 
+	// In pixels
+	glfwGetFramebufferSize(window, &winWidth, &winHeight);
+
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+	glfwSetCursorPosCallback(window, cursor_position_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 
 	glEnable(GL_DEPTH_TEST);
@@ -486,7 +551,7 @@ void init(GLFWwindow* window)
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
-	loadModelToContext("./models/something.obj", hugeSphereContext);
+	//loadModelToContext("./models/something.obj", hugeSphereContext);
 	loadModelToContext("./models/cube.obj", cubeMapContex);
 
 

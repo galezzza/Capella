@@ -21,6 +21,12 @@ uniform sampler2D textureMetallic;
 uniform sampler2D textureRoughness;
 uniform sampler2D textureAO;
 
+
+//TEST glow on earth hover
+uniform vec3 glowColor;
+uniform vec3 cameraPos;
+
+
 out vec4 out_color;
 
 
@@ -160,4 +166,12 @@ void main()
 	vec3 toneSpotColor = tone_mapping(bySpotColor, 400 * spotLightOn);
 
 	out_color = vec4(toneSunColor + toneSpotColor, 1);
+	
+	//TEST glow on hover
+	if (glowColor != vec3(-1)) {
+		vec3 normalizedVertexNormal = normalize(vecNormal);
+		vec3 viewDir = normalize(cameraPos - worldPos);
+		float angle = dot(viewDir, normalizedVertexNormal);
+		out_color = vec4(mix(glowColor, out_color.rgb, angle), 1.0);
+	}
 }
