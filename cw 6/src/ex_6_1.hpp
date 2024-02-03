@@ -41,6 +41,7 @@ Core::RenderContext asteroid;
 Core::RenderContext cubeMapContex;
 
 vec3 cameraPos = vec3(-4000.f, 0, 10.f);
+vec3 cameraUp = vec3(0.f, 1.f, 0.f);
 vec3 cameraDir = vec3(1.f, -0.f, 0.f);
 
 vec3 spaceshipPos = cameraPos + 1.5 * cameraDir + vec3(0, -2.5f, 0);
@@ -127,9 +128,7 @@ void printVec3(vec3 v) {
 
 mat4 createCameraMatrix()
 {
-	vec3 cameraSide = normalize(cross(cameraDir, vec3(0.f, 1.f, 0.f)));
-	vec3 cameraUp = normalize(cross(cameraSide, cameraDir));
-	//vec3 cameraUp = vec3(0.f, 1.f, 0.f);
+	vec3 cameraSide = normalize(cross(cameraDir, cameraUp));
 	mat4 cameraRotrationMatrix = mat4({
 		cameraSide.x,cameraSide.y,cameraSide.z,0,
 		cameraUp.x,cameraUp.y,cameraUp.z ,0,
@@ -529,6 +528,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		case SceneType::ON_PLANET:
 			currSceneType = SceneType::IN_SPACE;
 			spaceshipPos = vec3(calcEarthTransformation(glfwGetTime()) * vec4(0, 0, 0, 1)) + earth_r;
+			spaceshipDir = vec3(1, 0, 0);
+			cameraUp = vec3(0, 1, 0);
 			break;
 		default:
 			break;
@@ -745,11 +746,8 @@ void onPlanetProcessInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		vec3 nextPos = spaceshipPos + spaceshipDir * moveSpeed;
 		//remain same height above planet
-		vec3 nnp = normalize(nextPos);
 		nextPos = normalize(nextPos) * (PLANET_R + SPACESHIP_H);
-
 		spaceshipDir = normalize(nextPos - spaceshipPos);
-
 		spaceshipPos = nextPos;
 		printVec3(spaceshipPos);
 	}
@@ -757,11 +755,8 @@ void onPlanetProcessInput(GLFWwindow* window) {
 		vec3 nextPos = spaceshipPos - spaceshipDir * moveSpeed;
 		//remain same height above planet
 		nextPos = normalize(nextPos) * (PLANET_R + SPACESHIP_H);
-
 		spaceshipDir = normalize(spaceshipPos - nextPos);
-
 		spaceshipPos = nextPos;
-		printVec3(spaceshipPos);
 	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
 		spaceshipDir = vec3(rotate(angleSpeed, spaceshipUp) * vec4(spaceshipDir, 0));
@@ -769,9 +764,18 @@ void onPlanetProcessInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
 		spaceshipDir = vec3(rotate(-angleSpeed, spaceshipUp) * vec4(spaceshipDir, 0));
 	}
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+		SPACESHIP_H += moveSpeed;
+		spaceshipPos = normalize(spaceshipPos) * (PLANET_R + SPACESHIP_H);
+	}
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+		SPACESHIP_H -= moveSpeed;
+		spaceshipPos = normalize(spaceshipPos) * (PLANET_R + SPACESHIP_H);
+	}
 
-	cameraPos = spaceshipPos - 1.5 * spaceshipDir + vec3(0, 0.5f, 0);
+	cameraPos = spaceshipPos - 1.5 * spaceshipDir + spaceshipUp / 1.5;
 	cameraDir = spaceshipDir;
+	cameraUp = spaceshipUp;
 
 	//cameraDir = normalize(-cameraPos);
 
