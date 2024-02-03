@@ -41,6 +41,7 @@ Core::RenderContext asteroid;
 Core::RenderContext cubeMapContex;
 
 vec3 cameraPos = vec3(-4000.f, 0, 10.f);
+vec3 cameraUp = vec3(0.f, 1.f, 0.f);
 vec3 cameraDir = vec3(1.f, -0.f, 0.f);
 
 vec3 spaceshipPos = cameraPos + 1.5 * cameraDir + vec3(0, -2.5f, 0);
@@ -60,9 +61,9 @@ float R = 1;
 
 vec3 earthPosWor;
 float earth_r;
-constexpr float PLANET_R = 125;
-constexpr float MOON_R = 12;
-constexpr float MOON_H = 200;
+constexpr float PLANET_R = 1525;
+constexpr float MOON_R = 50;
+constexpr float MOON_H = 500;
 float SPACESHIP_H = 5;
 
 float msf = MOON_R;
@@ -127,9 +128,7 @@ void printVec3(vec3 v) {
 
 mat4 createCameraMatrix()
 {
-	vec3 cameraSide = normalize(cross(cameraDir, vec3(0.f, 1.f, 0.f)));
-	vec3 cameraUp = normalize(cross(cameraSide, cameraDir));
-	//vec3 cameraUp = vec3(0.f, 1.f, 0.f);
+	vec3 cameraSide = normalize(cross(cameraDir, cameraUp));
 	mat4 cameraRotrationMatrix = mat4({
 		cameraSide.x,cameraSide.y,cameraSide.z,0,
 		cameraUp.x,cameraUp.y,cameraUp.z ,0,
@@ -263,12 +262,25 @@ void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, mat4 mo
 
 }
 
+void switch2onPlanetScene() {
+	currSceneType = SceneType::ON_PLANET;
+	spaceshipPos = vec3(1 * PLANET_R + SPACESHIP_H, 0, 0);
+	spaceshipDir = vec3(eulerAngleY(radians(90.f)) * vec4(normalize(-spaceshipPos), 1));
+}
+
+mat4 calcEarthTransformation(float time) {
+	return rotate(float(time * 0.001), vec3(0, 1.0f, 0)) 
+		* translate(vec3(-2252.5, -2, 0))
+		* scale(vec3(25))
+		* rotate(-float(time * 0.125), vec3(0, 1.0f, 0));
+}
+
 //curve scaling
-float z_scale = -50;
+float z_scale_dist_coef = 1 / 30.f;
 float r_scale = 3;
 
 int currCurvePoint = 0;
-float desiredCurveDuration = 10.;
+float desiredCurveDuration = 5.;
 void renderCurveFlyScene(GLFWwindow* window) {
 	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -288,7 +300,7 @@ void renderCurveFlyScene(GLFWwindow* window) {
 	drawObjectColor(sphereContext, sunTransformation, vec3(0.9, 0.9, 0.2), programSun);
 
 	//PLANET
-	mat4 earthTransformation = rotate(float(time * 0.001), vec3(0, 1.0f, 0)) * translate(vec3(-2252.5, -2, 0)) * scale(vec3(25)) * rotate(-float(time * 0.125), vec3(0, 1.0f, 0));
+	mat4 earthTransformation = calcEarthTransformation(time);
 	earthPosWor = vec3(earthTransformation * vec4(0, 0, 0, 1));
 	earth_r = 25;
 	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
@@ -308,7 +320,10 @@ void renderCurveFlyScene(GLFWwindow* window) {
 	// to prevent index out of range
 	vec3 next = curve_points[min(currCurvePoint + step, NUM_CURVE_POINTS - 1)];
 	vec3 spaceshipDir = - normalize(curr - next);
-	vec3 spaceshipUp = normalize(vec3(curr.x, curr.y, 0));//dir to curve rotation axis
+	vec3 spaceshipUp = normalize(vec3(curr.x, curr.y, 0));//dir to curve Z axis
+	spaceshipUp = normalize(vec3(
+		rotate(radians(currCurvePoint / 50.f), spaceshipDir) * vec4(spaceshipUp, 1)
+	));
 	vec3 spaceshipSide = normalize(cross(spaceshipUp, spaceshipDir));
 
 	vec3 ship2planetVecW = earthPosWor - spaceshipPos;
@@ -319,7 +334,7 @@ void renderCurveFlyScene(GLFWwindow* window) {
 	//scale curve to desired shape
 	curr.x *= r_scale;
 	curr.y *= r_scale;
-	curr.z *= z_scale;
+	curr.z *= - length(ship2planetVecW) * z_scale_dist_coef;
 
 	mat4 shipTransformation = mat4()
 		* translate(spaceshipPos)
@@ -332,12 +347,14 @@ void renderCurveFlyScene(GLFWwindow* window) {
 			0.,0.,0.,1.,
 			})
 		* scale(vec3(1));
-	vec4 z_ax = normalize(vec4(0, 0, 1, 1) * shipTransformation);
-	vec4 z_ax1 = normalize(vec4(0, 0, 1, 1) * rotate(curveRotAngle, curveRotAxis));
-	vec4 spaceshipSide_ax = normalize(vec4(spaceshipSide, 1) * rotate(curveRotAngle, curveRotAxis));
 	drawObjectColorPBR(programPBR, shipContext, shipTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
-	currCurvePoint = (currCurvePoint + step) % (NUM_CURVE_POINTS - 1);
+	currCurvePoint = currCurvePoint + step;
+
+	if (currCurvePoint > NUM_CURVE_POINTS - 1) {
+		currCurvePoint = 0;
+		switch2onPlanetScene();
+	}
 
 	glUseProgram(0);
 	glfwSwapBuffers(window);
@@ -359,33 +376,35 @@ void renderOnPlanetScene(GLFWwindow* window) {
 
 	//PLANET
 	mat4 earthTransformation = scale(vec3(PLANET_R));
-	earthPosWor = vec3(earthTransformation * vec4(0, 0, 0, 1));
-	earth_r = PLANET_R;
+	//earthPosWor = vec3(earthTransformation * vec4(0, 0, 0, 1));
+	//earth_r = PLANET_R;
 	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	//mat4 moonTransformation = translate(vec3(PLANET_R, 0, 0)) * scale(vec3(msf));
 	//drawObjectColorPBR(programEarthPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 	
 	//SPACESHIP
-	vec3 cameraSide = normalize(cross(spaceshipDir, vec3(0.f, 1.f, 0.f)));
-	vec3 cameraUp = normalize(cross(cameraSide, spaceshipDir));
-	mat4 shipTransformation = translate(spaceshipPos) * rotate(0.f, vec3(0, 1.0f, 0)) * mat4({
-																														cameraSide.x,cameraSide.y,cameraSide.z,0,
-																														cameraUp.x,cameraUp.y,cameraUp.z ,0,
-																														spaceshipDir.x,spaceshipDir.y,spaceshipDir.z,0,
-																														0.,0.,0.,1.,
+ 	vec3 cameraUp = normalize(spaceshipPos);
+	//cameraUp = vec3(0.f, 0.f, 1.f);
+	vec3 cameraSide = normalize(cross(cameraUp, spaceshipDir));
+	mat4 shipTransformation = translate(spaceshipPos)
+		* mat4({
+			cameraSide.x,	cameraSide.y,	cameraSide.z,	0,
+			cameraUp.x,		cameraUp.y,		cameraUp.z ,	0,
+			spaceshipDir.x,	spaceshipDir.y,	spaceshipDir.z,	0,
+			0.,				0.,				0.,				1.,
 		});
-	//drawSpaceship(shipContext, shipTransformation, texture::ship, texture::scratches, texture::rust);
 	drawObjectColorPBR(programPBR, shipContext, shipTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	//SPOTLIGHT
-	mat4 spotTransformation = translate(spotPos) * rotate(0.f, vec3(0, 1.0f, 0)) * mat4({
-																														cameraSide.x,cameraSide.y,cameraSide.z,0,
-																														cameraUp.x,cameraUp.y,cameraUp.z ,0,
-																														spotDir.x,spotDir.y,spotDir.z,0,
-																														0.,0.,0.,1.,
-		}
-	) * scale(vec3(0.2));
+	mat4 spotTransformation = translate(spotPos)
+		* mat4({
+			cameraSide.x,cameraSide.y,cameraSide.z,0,
+			cameraUp.x,cameraUp.y,cameraUp.z ,0,
+			spotDir.x,spotDir.y,spotDir.z,0,
+			0.,0.,0.,1.,
+		}) 
+		* scale(vec3(0.2));
 	drawSpaceship(shipContext, spotTransformation, texture::ship, texture::scratches, texture::rust);
 
 
@@ -412,9 +431,15 @@ void renderInSpaceScene(GLFWwindow* window) {
 	drawObjectColor(sphereContext, sunTransformation, vec3(0.9, 0.9, 0.2), programSun);
 
 	//PLANET
-	mat4 earthTransformation = rotate(float(time * 0.001), vec3(0, 1.0f, 0)) * translate(vec3(-2252.5, -2, 0)) * scale(vec3(25)) * rotate(-float(time * 0.125), vec3(0, 1.0f, 0));
+	
+	mat4 earthTransformation = calcEarthTransformation(time);
 	earthPosWor = vec3(earthTransformation * vec4(0, 0, 0, 1));
 	earth_r = 25;
+	//turn off earth glow if it is too far
+	if (length(cameraPos - earthPosWor) > 1500) {
+		addGlow = false;
+	}
+
 	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	mat4 moonTransformation = earthTransformation * rotate(time * 5, vec3(0, 1.0f, 0)) * translate(vec3(0, 0, 2)) * scale(vec3(0.5));
@@ -500,13 +525,18 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		case SceneType::CURVE_FLY:
 			currSceneType = SceneType::IN_SPACE;
 			break;
+		case SceneType::ON_PLANET:
+			currSceneType = SceneType::IN_SPACE;
+			spaceshipPos = vec3(calcEarthTransformation(glfwGetTime()) * vec4(0, 0, 0, 1)) + earth_r;
+			spaceshipDir = vec3(1, 0, 0);
+			cameraUp = vec3(0, 1, 0);
+			break;
 		default:
 			break;
 		}
 		
 		//switch to next scene type
 		//currSceneType = SceneType((int(currSceneType) + 1) % int(SceneType::NUM_SCENE_TYPES));
-		//spaceshipPos = vec3(1 * PLANET_R + SPACESHIP_H, 0, 0);
 	}
 
 	if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
@@ -532,10 +562,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 	//DEBUG
 	if (key == GLFW_KEY_T && action == GLFW_PRESS) {
-		z_scale += 1;
+		z_scale_dist_coef *= 1.1;
 	}
 	if (key == GLFW_KEY_G && action == GLFW_PRESS) {
-		z_scale -= 1;
+		z_scale_dist_coef /= 1.1;
 	}
 }
 
@@ -600,8 +630,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 			//switch to CURVE_FLY
 			currSceneType = SceneType::CURVE_FLY;
 			currCurvePoint = 0;
-			//spaceshipPos = vec3(1 * PLANET_R + SPACESHIP_H, 0, 0);
-			//spaceshipDir = normalize(- spaceshipPos);
 			addGlow = false;
 		}
 	}
@@ -713,25 +741,41 @@ void shutdown(GLFWwindow* window)
 }
 
 void onPlanetProcessInput(GLFWwindow* window) {
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-		spaceshipPos = spaceshipPos + spaceshipDir * moveSpeed;
+	vec3 spaceshipUp = normalize(spaceshipPos);
 
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+		vec3 nextPos = spaceshipPos + spaceshipDir * moveSpeed;
+		//remain same height above planet
+		nextPos = normalize(nextPos) * (PLANET_R + SPACESHIP_H);
+		spaceshipDir = normalize(nextPos - spaceshipPos);
+		spaceshipPos = nextPos;
 		printVec3(spaceshipPos);
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-		spaceshipPos -= spaceshipDir * moveSpeed;
-
-		printVec3(spaceshipPos);
+		vec3 nextPos = spaceshipPos - spaceshipDir * moveSpeed;
+		//remain same height above planet
+		nextPos = normalize(nextPos) * (PLANET_R + SPACESHIP_H);
+		spaceshipDir = normalize(spaceshipPos - nextPos);
+		spaceshipPos = nextPos;
 	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-		spaceshipDir = vec3(eulerAngleY(angleSpeed) * vec4(spaceshipDir, 0));
+		spaceshipDir = vec3(rotate(angleSpeed, spaceshipUp) * vec4(spaceshipDir, 0));
 	}
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-		spaceshipDir = vec3(eulerAngleY(-angleSpeed) * vec4(spaceshipDir, 0));
+		spaceshipDir = vec3(rotate(-angleSpeed, spaceshipUp) * vec4(spaceshipDir, 0));
+	}
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+		SPACESHIP_H += moveSpeed;
+		spaceshipPos = normalize(spaceshipPos) * (PLANET_R + SPACESHIP_H);
+	}
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+		SPACESHIP_H -= moveSpeed;
+		spaceshipPos = normalize(spaceshipPos) * (PLANET_R + SPACESHIP_H);
 	}
 
-	cameraPos = spaceshipPos - 1.5 * spaceshipDir + vec3(0, 0.5f, 0);
+	cameraPos = spaceshipPos - 1.5 * spaceshipDir + spaceshipUp / 1.5;
 	cameraDir = spaceshipDir;
+	cameraUp = spaceshipUp;
 
 	//cameraDir = normalize(-cameraPos);
 
