@@ -570,7 +570,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 			currSceneType = SceneType::IN_SPACE;
 			break;
 		case SceneType::AROUND_PLANET:
-			currSceneType = SceneType::ON_PLANET;
+			switch2OnPlanetScene();
 			break;
 		case SceneType::ON_PLANET:
 			switch2InSpaceScene();
