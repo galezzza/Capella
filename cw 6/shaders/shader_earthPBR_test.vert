@@ -32,7 +32,7 @@ void main()
 	vecNormal = normalize((modelMatrix * vec4(vertexNormal, 0)).xyz);
 	worldPos = (modelMatrix * vec4(vertexPosition, 1)).xyz;
 	vec4 position = transformation * vec4(vertexPosition, 1.0);
-	gl_Position = position + vec4(random(vertexTexCoord)* 0 * vertexNormal, 1);
+	gl_Position = position + vec4(random(vertexTexCoord)* 20 * vertexNormal, 1);
 	vVertexTexCoord = vertexTexCoord;
 
 

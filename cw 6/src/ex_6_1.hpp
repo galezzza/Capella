@@ -247,7 +247,7 @@ void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, mat4 mo
 	//glUniform1f(glGetUniformLocation(programPBR, "angleAf"), angleAf);
 
 	vec3 glowColor = vec3(-1);
-	if (addGlow && programPBR == programEarthPBR) {
+	if (addGlow) {
 		glowColor = vec3(0, 1, 0);
 	}
 	glUniform3f(glGetUniformLocation(programPBR, "glowColor"), glowColor.r, glowColor.g, glowColor.b);
@@ -320,7 +320,7 @@ void renderCurveFlyScene(GLFWwindow* window) {
 	mat4 earthTransformation = calcEarthTransformation(time);
 	earthPosWor = vec3(earthTransformation * vec4(0, 0, 0, 1));
 	earth_r = 25;
-	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+	drawObjectColorPBR(programPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 
 	//DEBUG
@@ -433,6 +433,7 @@ void renderAroundPlanetScene(GLFWwindow* window) {
 void renderOnPlanetScene(GLFWwindow* window) {
 	glClearColor(0.0f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	float time = glfwGetTime();
 
 	//SPACESHIP
 	vec3 cameraSide = normalize(cross(spaceshipDir, vec3(0.f, 1.f, 0.f)));
@@ -447,7 +448,9 @@ void renderOnPlanetScene(GLFWwindow* window) {
 		});
 	//drawSpaceship(shipContext, shipTransformation, texture::ship, texture::scratches, texture::rust);
 	drawObjectColorPBR(programPBR, shipContext, shipTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
-
+	
+	mat4 earthTransformation = glm::scale(glm::vec3(10000, 0.001, 10000)) * glm::translate(glm::vec3(0,-100,0));
+	drawObjectColorPBR(programPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	glUseProgram(0);
 	glfwSwapBuffers(window);
@@ -481,7 +484,7 @@ void renderInSpaceScene(GLFWwindow* window) {
 		addGlow = false;
 	}
 
-	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+	drawObjectColorPBR(programPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	mat4 moonTransformation = earthTransformation * rotate(time * 5, vec3(0, 1.0f, 0)) * translate(vec3(0, 0, 2)) * scale(vec3(0.5));
 
