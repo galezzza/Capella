@@ -24,7 +24,7 @@ wizualizacja zapewnia realistyczne oświetlenie obiektów, uwzględniające inte
 ![PBR](docs/screenshots/PBR.png)
 - Shadow Mapping: Implementacja efektów cieniowania, dodająca głębi i realizmu renderowanym obiektom.
 ![Shadow Mapping](docs/screenshots/Shadow_Mapping.png)
-- Ray-casting: dla implementacji hover/click na dostępnych planetach (pzy najechanie
+- Ray-casting: dla implementacji hover/click na dostępnych planetach (pszy najechanie
   myszką planeta będzie świecić na zielono)
 ![Ray-casting](docs/screenshots/Ray_casting_hover.png)
 - Parallel transfer: po kliknienciu na dostępną planetę zaczyna się animacja statku lecącego w stronę tej planety
@@ -33,6 +33,7 @@ wizualizacja zapewnia realistyczne oświetlenie obiektów, uwzględniające inte
 - Proceduralne generowanie terenu: Wykorzystując algorytmy proceduralne, projekt generuje różnorodne tereny planet, 
 co zapewnia unikalne doświadczenia przy każdym uruchomieniu.
 ![Proceduralne generowanie terenu](docs/screenshots/PGT.png)
+- Skybox
 - Interaktywność: Użytkownik może interaktywnie poruszać się po scenie kosmicznej za pomocą klawiatury, 
 używać muszki do wyboru planety, latać wzdłuż powierzchni planety, zmieniając perspektywę 
 i obserwując sceny z różnych punktów widzenia.
