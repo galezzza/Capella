@@ -32,6 +32,9 @@ const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 int winWidth, winHeight;
 
 GLuint programPBR;
+GLuint programEarthNM;
+glm::vec3 sunLightColor = glm::vec3(1.f, 1.f, 1.f);
+
 GLuint programEarthPBR;
 GLuint programSun;
 GLuint programSpaceship;
@@ -71,6 +74,15 @@ constexpr float PLANET_R = 1525;
 constexpr float MOON_R = 50;
 constexpr float MOON_H = 500;
 float SPACESHIP_H = 10;
+
+//MORE PLANETS
+std::vector<float> angleShift = { 0.5, 2, 3, 4 };
+std::vector<float> ROT_R = { 2500, 3500, 4500, 6000 };
+std::vector<float> SELF_ROT_SPEED = { 0.1, 0.025, 0.05, 0.007 };
+std::vector<float> SUN_ROT_SPEED = { 0.001, 0.01, 0.0001, 0.005 };
+std::vector<float> scaleFactor = { 30, 50, 100, 200 };
+std::vector<vec3> colorsToMix = { vec3(-1), vec3(1, 0, 0), vec3(0, 0, 1), vec3(1, 1, 0) };
+
 
 float msf = MOON_R;
 
@@ -179,6 +191,32 @@ mat4 createPerspectiveMatrix()
 	perspectiveMatrix = transpose(perspectiveMatrix);
 
 	return perspectiveMatrix;
+}
+
+void drawWithNormalMapping(Core::RenderContext& context, glm::mat4 modelMatrix) {
+	GLuint program = programEarthNM;
+	glUseProgram(program);
+	Core::SetActiveTexture(texture::earth, "colorTexture", program, 0);
+	Core::SetActiveTexture(texture::clouds, "clouds", program, 1);
+	Core::SetActiveTexture(texture::earthNormal, "normalSampler", program, 2);
+	glm::mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
+	glm::mat4 transformation = viewProjectionMatrix * modelMatrix;
+	glUniformMatrix4fv(glGetUniformLocation(program, "transformation"), 1, GL_FALSE, (float*)&transformation);
+	glUniformMatrix4fv(glGetUniformLocation(program, "modelMat"), 1, GL_FALSE, (float*)&modelMatrix);
+	//sun
+	glUniform3f(glGetUniformLocation(program, "sunPos"), 0.f, 0.f, 0.f);
+	glUniform3f(glGetUniformLocation(program, "sunColor"), sunLightColor.x, sunLightColor.y, sunLightColor.z);
+	glUniform1f(glGetUniformLocation(program, "sunLightExp"), exp_param);
+	//spaceship lamp
+	glUniform3f(glGetUniformLocation(program, "lampPos"), spotPos.x, spotPos.y, spotPos.z);
+	glUniform3f(glGetUniformLocation(program, "lampColor"), 1, 1, 1);
+	glUniform1f(glGetUniformLocation(program, "lampLightExp"), spotLightOn * exp_param / 10);
+
+	glUniform3f(glGetUniformLocation(program, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
+
+	Core::DrawContext(context);
+	glUseProgram(0);
+
 }
 
 void drawObjectColor(Core::RenderContext& context, mat4 modelMatrix, vec3 color, GLuint program) {
@@ -570,13 +608,7 @@ void renderInSpaceScene(GLFWwindow* window) {
 	drawObjectColorPBR(programPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	//MORE PLANETS
-	std::vector<float> angleShift = {1, 2, 3, 4};
-	std::vector<float> ROT_R = {2500, 3500, 4500, 6000};
-	std::vector<float> SELF_ROT_SPEED = {0.006, 0.0025, 0.0005, 0.0001};
-	std::vector<float> SUN_ROT_SPEED = {0.001, 0.01, 0.0001, 0.005};
-	std::vector<float> scaleFactor = { 30, 50, 100, 200 };
-	std::vector<vec3> colorsToMix = { vec3(-1), vec3(1, 0, 0), vec3(0, 0, 1), vec3(1, 1, 0)};
-	for (int i = 0; i < angleShift.size(); i++) {
+	for (int i = 1; i < angleShift.size(); i++) {
 		drawObjectColorPBR(programPBR, sphereContext,
 			rotate(time * SUN_ROT_SPEED[i] + angleShift[i], vec3(0, 1.0f, 0))
 			* translate(vec3(-ROT_R[i], 0, 0))
@@ -585,6 +617,10 @@ void renderInSpaceScene(GLFWwindow* window) {
 			rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds,
 			colorsToMix[i]);
 	}
+	drawWithNormalMapping(sphereContext, rotate(time * SUN_ROT_SPEED[0] + angleShift[0], vec3(0, 1.0f, 0))
+		* translate(vec3(-ROT_R[0], 0, 0))
+		* rotate(-float(time * SELF_ROT_SPEED[0]), vec3(0, 1.0f, 0))
+		* scale(vec3(scaleFactor[0])));
 
 	//SPACESHIP
 	vec3 cameraSide = normalize(cross(spaceshipDir, vec3(0.f, 1.f, 0.f)));
@@ -850,6 +886,7 @@ void init(GLFWwindow* window)
 	programCubeMap = shaderLoader.CreateProgram("shaders/shader_skybox.vert", "shaders/shader_skybox.frag");
 	programDepth = shaderLoader.CreateProgram("shaders/shadow_shader.vert", "shaders/shadow_shader.frag");
 	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
+	programEarthNM = shaderLoader.CreateProgram("shaders/shader_earth.vert", "shaders/shader_earth.frag");
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
@@ -949,18 +986,18 @@ void onPlanetProcessInput(GLFWwindow* window) {
 			return;
 		}
 	}
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-		SPACESHIP_H -= moveSpeed;
-		spaceshipPos = normalize(spaceshipPos) * (PLANET_R + SPACESHIP_H);
+	//if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+	//	SPACESHIP_H -= moveSpeed;
+	//	spaceshipPos = normalize(spaceshipPos) * (PLANET_R + SPACESHIP_H);
 
-		// Not just ` < 1' but `< 1 - PLANET_R / 125` since
-		//  earth radius is not exactly = PLANET_R, but about PLANET_R * 123/124
-		// This is because of our sphere.obj model
-		if (SPACESHIP_H < 1 - PLANET_R / 124) {
-			switch2OnPlanetScene();
-			return;
-		}
-	}
+	//	// Not just ` < 1' but `< 1 - PLANET_R / 125` since
+	//	//  earth radius is not exactly = PLANET_R, but about PLANET_R * 123/124
+	//	// This is because of our sphere.obj model
+	//	if (SPACESHIP_H < 1 - PLANET_R / 124) {
+	//		switch2OnPlanetScene();
+	//		return;
+	//	}
+	//}
 
 	cameraPos = spaceshipPos - 1.5 * spaceshipDir + spaceshipUp / 1.5;
 	cameraDir = spaceshipDir;
@@ -1007,12 +1044,12 @@ void processInput(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		spaceshipPos = spaceshipPos + spaceshipDir * moveSpeed;
 
-		printVec3(spaceshipPos);
+		//printVec3(spaceshipPos);
 	}
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
 		spaceshipPos -= spaceshipDir * moveSpeed;
 
-		printVec3(spaceshipPos);
+		//printVec3(spaceshipPos);
 	}
 	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
 		spaceshipPos += spaceshipSide * moveSpeed;
