@@ -26,8 +26,8 @@ uniform sampler2D textureAO;
 uniform sampler2D depthMap;
 
 
-//TEST glow on earth hover
 uniform vec3 glowColor;
+uniform vec3 colorToMixWith;
 uniform vec3 cameraPos;
 
 
@@ -172,8 +172,11 @@ void main()
 {
 	//vec3 color = texture2D(colorTexture, vertexTexCoord).rgb;
 	vec3 albedoTex = texture2D(textureAlbedo, vVertexTexCoord).rgb;
-	albedoTex  = mix(albedoTex, vec3(1, 0, 1), random(vVertexTexCoord));
-	albedoTex  = mix(albedoTex, vec3(0, 1, 0), random(vVertexTexCoord));
+	if (colorToMixWith != vec3(-1)) {
+		albedoTex  = mix(albedoTex, colorToMixWith, random(vVertexTexCoord));
+	}
+	//albedoTex  = mix(albedoTex, vec3(0, 1, 0), random(vVertexTexCoord));
+
 	vec3 normalTex= texture2D(textureNormal, vVertexTexCoord).rgb; // = vec3(0,0,1)
 	vec3 metallicTex = texture2D(textureMetallic, vVertexTexCoord).rgb;
 	float roughbessTex = texture2D(textureRoughness, vVertexTexCoord).r;

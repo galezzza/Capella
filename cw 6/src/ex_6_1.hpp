@@ -233,7 +233,7 @@ void drawSpaceship(Core::RenderContext& context, mat4 modelMatrix, GLuint textur
 void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, mat4 modelMatrix, 
 						GLuint textureAlbedo, GLuint textureNormal, GLuint textureMetallic, 
 						GLuint textureRoughness, GLuint textureAO,
-						bool addGlow = false) {
+						vec3 colorToMixWith = vec3(-1), bool addGlow = false) {
 
 	glUseProgram(programPBR);
 	
@@ -270,6 +270,7 @@ void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, mat4 mo
 		glowColor = vec3(0, 1, 0);
 	}
 	glUniform3f(glGetUniformLocation(programPBR, "glowColor"), glowColor.r, glowColor.g, glowColor.b);
+	glUniform3f(glGetUniformLocation(programPBR, "colorToMixWith"), colorToMixWith.r, colorToMixWith.g, colorToMixWith.b);
 
 
 	Core::SetActiveTexture(textureAlbedo, "textureAlbedo", programPBR, 0);
@@ -462,9 +463,11 @@ void renderAroundPlanetScene(GLFWwindow* window) {
 
 	//PLANET
 	mat4 earthTransformation = scale(vec3(PLANET_R));
-	//earthPosWor = vec3(earthTransformation * vec4(0, 0, 0, 1));
-	//earth_r = PLANET_R;
-	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+	drawObjectColorPBR(programEarthPBR, sphereContext, earthTransformation, 
+		rustediron2::albedo, rustediron2::normal, rustediron2::metallic, 
+		rustediron2::roughness, texture::clouds,
+		vec3(1, 0, 1)
+	);
 
 	//mat4 moonTransformation = translate(vec3(PLANET_R, 0, 0)) * scale(vec3(msf));
 	//drawObjectColorPBR(programEarthPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
@@ -560,10 +563,28 @@ void renderInSpaceScene(GLFWwindow* window) {
 
 	drawObjectColorPBR(programPBR, sphereContext, earthTransformation, 
 					   rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds,
+					   vec3(1, 0, 1), //color to mix albedo color with
 					   addGlow);//addGlow if needed
 
 	mat4 moonTransformation = calcEarthTransformation(time, 1) * rotate(time, vec3(0, 1.0f, 0)) * translate(vec3(0, 0, 2 * earth_r)) * scale(vec3(5));
 	drawObjectColorPBR(programPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+
+	//MORE PLANETS
+	std::vector<float> angleShift = {1, 2, 3, 4};
+	std::vector<float> ROT_R = {2500, 3500, 4500, 6000};
+	std::vector<float> SELF_ROT_SPEED = {0.006, 0.0025, 0.0005, 0.0001};
+	std::vector<float> SUN_ROT_SPEED = {0.001, 0.01, 0.0001, 0.005};
+	std::vector<float> scaleFactor = { 30, 50, 100, 200 };
+	std::vector<vec3> colorsToMix = { vec3(-1), vec3(1, 0, 0), vec3(0, 0, 1), vec3(1, 1, 0)};
+	for (int i = 0; i < angleShift.size(); i++) {
+		drawObjectColorPBR(programPBR, sphereContext,
+			rotate(time * SUN_ROT_SPEED[i] + angleShift[i], vec3(0, 1.0f, 0))
+			* translate(vec3(-ROT_R[i], 0, 0))
+			* rotate(-float(time * SELF_ROT_SPEED[i]), vec3(0, 1.0f, 0))
+			* scale(vec3(scaleFactor[i])),
+			rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds,
+			colorsToMix[i]);
+	}
 
 	//SPACESHIP
 	vec3 cameraSide = normalize(cross(spaceshipDir, vec3(0.f, 1.f, 0.f)));
@@ -694,9 +715,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 
 	//DEBUG
-	if (key == GLFW_KEY_B && action == GLFW_PRESS) {
-		DEBUG_SHADES_DEPTH_BUFFER = !DEBUG_SHADES_DEPTH_BUFFER;
-	}
+	//if (key == GLFW_KEY_B && action == GLFW_PRESS) {
+	//	DEBUG_SHADES_DEPTH_BUFFER = !DEBUG_SHADES_DEPTH_BUFFER;
+	//}
 }
 
 bool checkIntersection(vec3 ray_dir) {
@@ -952,8 +973,8 @@ void onPlanetProcessInput(GLFWwindow* window) {
 		exp_param -= 10;
 	}
 
-	spotPos = spaceshipPos - spaceshipDir + 10 * spaceshipUp;
-	spotDir = spotLightOn * (spaceshipDir - 0.8 * spaceshipUp);
+	spotPos = spaceshipPos - spaceshipDir + 30 * spaceshipUp;
+	spotDir = spotLightOn * (spaceshipDir - 0.5 * spaceshipUp);
 }
 
 //obsluga wejscia
