@@ -8,6 +8,8 @@ in vec3 viewDirTS;
 in vec3 lightDirTS;
 in vec3 spotlightDirTS;
 
+in vec4 sunSpacePos;
+
 //uniform vec3 spotPos;
 //uniform vec3 spotDir;
 //uniform vec3 angleAf;
@@ -21,6 +23,8 @@ uniform sampler2D textureMetallic;
 uniform sampler2D textureRoughness;
 uniform sampler2D textureAO;
 
+uniform sampler2D depthMap;
+
 
 //TEST glow on earth hover
 uniform vec3 glowColor;
@@ -31,7 +35,21 @@ out vec4 out_color;
 
 
 const float PI = 3.14159265359;
+float shadowBias = 0.01;
 
+float random(vec2 uv){
+	return fract(sin(dot(uv,vec2(12.9898,78.233)))*43758.5453123);
+}
+
+float calculateShadow() {
+    vec4 sunSpacePosU = sunSpacePos / sunSpacePos.w;
+    vec4 sunSpacePosNormalized = sunSpacePosU * 0.5 + 0.5;
+    float closestDepth = texture2D(depthMap, sunSpacePosNormalized.xy).r;
+    if (closestDepth + shadowBias > sunSpacePosNormalized.z) {
+        return 1.0;
+    }
+    return 0.0;
+}
 
 vec3 f_lambert(vec3 c){
 	return c/PI;
@@ -154,6 +172,8 @@ void main()
 {
 	//vec3 color = texture2D(colorTexture, vertexTexCoord).rgb;
 	vec3 albedoTex = texture2D(textureAlbedo, vVertexTexCoord).rgb;
+	albedoTex  = mix(albedoTex, vec3(1, 0, 1), random(vVertexTexCoord));
+	albedoTex  = mix(albedoTex, vec3(0, 1, 0), random(vVertexTexCoord));
 	vec3 normalTex= texture2D(textureNormal, vVertexTexCoord).rgb; // = vec3(0,0,1)
 	vec3 metallicTex = texture2D(textureMetallic, vVertexTexCoord).rgb;
 	float roughbessTex = texture2D(textureRoughness, vVertexTexCoord).r;
@@ -165,7 +185,9 @@ void main()
 	vec3 toneSunColor = tone_mapping(bySunColor, exp_param);
 	vec3 toneSpotColor = tone_mapping(bySpotColor, 400 * spotLightOn);
 
-	out_color = vec4(toneSunColor + toneSpotColor, 1);
+	out_color = vec4(toneSunColor * calculateShadow() + toneSpotColor, 1);
+	//DEBUG
+	//out_color = vec4(vec3(calculateShadow()), 1);
 	
 	//TEST glow on hover
 	if (glowColor != vec3(-1)) {

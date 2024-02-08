@@ -118,9 +118,17 @@
     <None Include="shaders\shader_skybox.vert">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="shaders\shader_PBR_test.vert" />
-    <None Include="shaders\shader_PBR_test.frag" />
-    <None Include="shaders\shader_earthPBR_test.vert" />
-    <None Include="shaders\shader_spaceship_test.frag" />
+    <None Include="shaders\shader_earthPBR_test.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_PBR_test.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_PBR_test.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="shaders\shader_spaceship_test.frag">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

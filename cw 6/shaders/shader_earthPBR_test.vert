@@ -8,6 +8,7 @@ layout(location = 4) in vec3 vertexBitangent;
 
 uniform mat4 transformation;
 uniform mat4 modelMatrix;
+uniform mat4 LightVP;
 
 uniform vec3 lightPos;
 uniform vec3 spotPos;
@@ -21,6 +22,8 @@ out vec3 lightDirTS;
 out vec3 spotlightDirTS;
 
 out vec2 vVertexTexCoord;
+
+out vec4 sunSpacePos;
 
 float random(vec2 uv){
 	return fract(sin(dot(uv,vec2(12.9898,78.233)))*43758.5453123);
@@ -46,4 +49,6 @@ void main()
 	lightDirTS = TBN*L;
 	vec3 SL = normalize(spotPos-worldPos);
 	spotlightDirTS = TBN*SL;
+
+	sunSpacePos=LightVP*modelMatrix*vec4(vertexPosition,1);
 }
