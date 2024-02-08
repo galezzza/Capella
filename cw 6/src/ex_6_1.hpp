@@ -19,10 +19,16 @@
 
 using namespace glm;
 
-/// <summary>
-/// fist commit
-/// </summary>
+GLuint depthMapFBO;
+GLuint depthMap;
+GLuint programDepth;
+glm::mat4 lightVP;
+GLuint programTest;
+Core::RenderContext shadowTestContext;
 
+bool DEBUG_SHADES_DEPTH_BUFFER = false;
+
+const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 int winWidth, winHeight;
 
 GLuint programPBR;
@@ -222,13 +228,26 @@ void drawSpaceship(Core::RenderContext& context, mat4 modelMatrix, GLuint textur
 	Core::SetActiveTexture(textureID2, "scratches", programSpaceship, 1);
 	Core::SetActiveTexture(textureID3, "rust", programSpaceship, 2);
 
-	
-
 	Core::DrawContext(context);
 }
-void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, mat4 modelMatrix, GLuint textureAlbedo, GLuint textureNormal, GLuint textureMetallic, GLuint textureRoughness, GLuint textureAO) {
+void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, mat4 modelMatrix, 
+						GLuint textureAlbedo, GLuint textureNormal, GLuint textureMetallic, 
+						GLuint textureRoughness, GLuint textureAO,
+						bool addGlow = false) {
 
 	glUseProgram(programPBR);
+	
+	//DEBUG
+	vec4 sunSpacePos = lightVP * modelMatrix * vec4(-1, 0, 0, 1);
+	sunSpacePos = lightVP * modelMatrix * vec4(0, 0, 1, 1);
+	
+	vec4 sunSpacePosU = sunSpacePos / sunSpacePos.w;
+	vec4 sunSpacePosNormalized = sunSpacePosU * 0.5 + vec4(0.5);
+	float closestDepth = 0.5;
+	if (closestDepth + 0.01 > sunSpacePosNormalized.z) {
+		//std::cout << "yes" << std::endl;
+	}
+
 	mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix();
 	mat4 transformation = viewProjectionMatrix * modelMatrix;
 	glUniformMatrix4fv(glGetUniformLocation(programPBR, "transformation"), 1, GL_FALSE, (float*)&transformation);
@@ -258,16 +277,19 @@ void drawObjectColorPBR(GLuint programPBR, Core::RenderContext& context, mat4 mo
 	Core::SetActiveTexture(textureMetallic, "textureMetallic", programPBR, 2);
 	Core::SetActiveTexture(textureRoughness, "textureRoughness", programPBR, 3);
 	Core::SetActiveTexture(textureAO, "textureAO", programPBR, 4);
+	Core::SetActiveTexture(depthMap, "depthMap", programPBR, 5);
+	
+	glUniformMatrix4fv(glGetUniformLocation(programPBR, "LightVP"), 1, GL_FALSE, (float*)&lightVP);
 
 	Core::DrawContext(context);
 
 }
 
-mat4 calcEarthTransformation(float time) {
+mat4 calcEarthTransformation(float time, float scaleFactor) {
 	return rotate(float(time * 0.001), vec3(0, 1.0f, 0))
 		* translate(vec3(-2252.5, -2, 0))
 		* rotate(-float(time * 0.125), vec3(0, 1.0f, 0))
-		* scale(vec3(25));
+		* scale(vec3(scaleFactor));
 }
 
 
@@ -287,9 +309,56 @@ void switch2OnPlanetScene() {
 
 void switch2InSpaceScene() {
 	currSceneType = SceneType::IN_SPACE;
-	spaceshipPos = vec3(calcEarthTransformation(glfwGetTime()) * vec4(0, 0, 0, 1)) + earth_r;
+	spaceshipPos = vec3(calcEarthTransformation(glfwGetTime(), earth_r) * vec4(0, 0, 0, 1)) + earth_r;
 	spaceshipDir = vec3(1, 0, 0);
 	cameraUp = vec3(0, 1, 0);
+}
+
+void drawObjectDepth(Core::RenderContext& context, glm::mat4 modelMatrix, glm::mat4 viewProjection) {
+	glUniformMatrix4fv(glGetUniformLocation(programDepth, "viewProjectionMatrix"), 1, GL_FALSE, (float*)&viewProjection);
+	glUniformMatrix4fv(glGetUniformLocation(programDepth, "modelMatrix"), 1, GL_FALSE, (float*)&modelMatrix);
+
+	Core::DrawContext(context);
+}
+
+void renderShadowmapSun() {
+	float time = glfwGetTime();
+	//time = 0;//DEBUG
+	
+	//ustawianie przestrzeni rysowania 
+	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+	//bindowanie FBO
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	//czyszczenie mapy głębokości 
+	glClear(GL_DEPTH_BUFFER_BIT);
+	//ustawianie programu
+	glUseProgram(programDepth);
+
+	float disFromSun = length(vec3(calcEarthTransformation(time, 1) * vec4(0, 0, 0, 1)));
+
+	//viewProjection matrix
+	lightVP = glm::ortho(-60.f, 60.f, -60.f, 60.f, disFromSun - 60, disFromSun + 60) * glm::lookAt(vec3(0, 0, 0), earthPosWor, glm::vec3(0, 1, 0));
+
+	//draw
+	mat4 earthTransformation = calcEarthTransformation(time, earth_r);
+	drawObjectDepth(sphereContext, earthTransformation, lightVP);
+
+	mat4 moonTransformation = calcEarthTransformation(time, 1) * rotate(time, vec3(0, 1.0f, 0)) * translate(vec3(0, 0, 2 * earth_r)) * scale(vec3(5));
+	drawObjectDepth(sphereContext, moonTransformation, lightVP);
+
+	vec3 cameraSide = normalize(cross(spaceshipDir, vec3(0.f, 1.f, 0.f)));
+	vec3 cameraUp = normalize(cross(cameraSide, spaceshipDir));
+	mat4 shipTransformation = translate(spaceshipPos) 
+		* mat4({
+			cameraSide.x,	cameraSide.y,	cameraSide.z,	0,
+			cameraUp.x,		cameraUp.y,		cameraUp.z ,	0,
+			spaceshipDir.x,	spaceshipDir.y,	spaceshipDir.z,	0,
+			0.,				0.,				0.,				1.,
+		});
+	drawObjectDepth(shipContext, shipTransformation, lightVP);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, winWidth, winHeight);
 }
 
 //curve scaling
@@ -317,7 +386,7 @@ void renderCurveFlyScene(GLFWwindow* window) {
 	drawObjectColor(sphereContext, sunTransformation, vec3(0.9, 0.9, 0.2), programSun);
 
 	//PLANET
-	mat4 earthTransformation = calcEarthTransformation(time);
+	mat4 earthTransformation = calcEarthTransformation(time, earth_r);
 	earthPosWor = vec3(earthTransformation * vec4(0, 0, 0, 1));
 	earth_r = 25;
 	drawObjectColorPBR(programPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
@@ -461,6 +530,11 @@ void renderInSpaceScene(GLFWwindow* window) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	mat4 transformation;
 	float time = glfwGetTime();
+	//time = 0;//DEBUG
+
+	glCullFace(GL_FRONT);
+	renderShadowmapSun();
+	glCullFace(GL_BACK); //reset original culling face
 
 	glUseProgram(programCubeMap);
 	mat4 viewProjectionMatrix = createPerspectiveMatrix() * createCameraMatrix() * translate(cameraPos);
@@ -476,7 +550,7 @@ void renderInSpaceScene(GLFWwindow* window) {
 
 	//PLANET
 	
-	mat4 earthTransformation = calcEarthTransformation(time);
+	mat4 earthTransformation = calcEarthTransformation(time, earth_r);
 	earthPosWor = vec3(earthTransformation * vec4(0, 0, 0, 1));
 	earth_r = 25;
 	//turn off earth glow if it is too far
@@ -484,9 +558,12 @@ void renderInSpaceScene(GLFWwindow* window) {
 		addGlow = false;
 	}
 
-	drawObjectColorPBR(programPBR, sphereContext, earthTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
+	drawObjectColorPBR(programPBR, sphereContext, earthTransformation, 
+					   rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds,
+					   addGlow);//addGlow if needed
 
-	mat4 moonTransformation = earthTransformation * rotate(time * 5, vec3(0, 1.0f, 0)) * translate(vec3(0, 0, 2)) * scale(vec3(0.5));
+	mat4 moonTransformation = calcEarthTransformation(time, 1) * rotate(time, vec3(0, 1.0f, 0)) * translate(vec3(0, 0, 2 * earth_r)) * scale(vec3(5));
+	drawObjectColorPBR(programPBR, sphereContext, moonTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	//SPACESHIP
 	vec3 cameraSide = normalize(cross(spaceshipDir, vec3(0.f, 1.f, 0.f)));
@@ -501,15 +578,24 @@ void renderInSpaceScene(GLFWwindow* window) {
 	drawObjectColorPBR(programPBR, shipContext, shipTransformation, rustediron2::albedo, rustediron2::normal, rustediron2::metallic, rustediron2::roughness, texture::clouds);
 
 	//SPOTLIGHT
-	mat4 spotTransformation = translate(spotPos) * rotate(0.f, vec3(0, 1.0f, 0)) * mat4({
-																														cameraSide.x,cameraSide.y,cameraSide.z,0,
-																														cameraUp.x,cameraUp.y,cameraUp.z ,0,
-																														spotDir.x,spotDir.y,spotDir.z,0,
-																														0.,0.,0.,1.,
+	mat4 spotTransformation = translate(spotPos)
+		* mat4({
+		cameraSide.x,cameraSide.y,cameraSide.z,0,
+		cameraUp.x,cameraUp.y,cameraUp.z ,0,
+		spotDir.x,spotDir.y,spotDir.z,0,
+		0.,0.,0.,1.,
 		}
 	) * scale(vec3(0.2));
 	drawSpaceship(shipContext, spotTransformation, texture::ship, texture::scratches, texture::rust);
 
+	//test depth buffer
+	if (DEBUG_SHADES_DEPTH_BUFFER) {
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glUseProgram(programTest);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		Core::DrawContext(shadowTestContext);
+	}
 
 	glUseProgram(0);
 	glfwSwapBuffers(window);
@@ -608,11 +694,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 
 	//DEBUG
-	if (key == GLFW_KEY_T && action == GLFW_PRESS) {
-		z_scale_dist_coef *= 1.1;
-	}
-	if (key == GLFW_KEY_G && action == GLFW_PRESS) {
-		z_scale_dist_coef /= 1.1;
+	if (key == GLFW_KEY_B && action == GLFW_PRESS) {
+		DEBUG_SHADES_DEPTH_BUFFER = !DEBUG_SHADES_DEPTH_BUFFER;
 	}
 }
 
@@ -705,10 +788,30 @@ void generateSimple3dCurve() {
 
 }
 
+void initDepthMap() {
+	glGenFramebuffers(1, &depthMapFBO);
+
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+		SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+}
+
 void init(GLFWwindow* window)
 {
 	generateSimple3dCurve();
-
+	
 	// The window size is in screen coordinates, not pixels.
 	//glfwGetWindowSize(window, &width, &height); 
 	// In pixels
@@ -724,12 +827,15 @@ void init(GLFWwindow* window)
 	programEarthPBR = shaderLoader.CreateProgram("shaders/shader_earthPBR_test.vert", "shaders/shader_PBR_test.frag");
 	programSpaceship = shaderLoader.CreateProgram("shaders/shader_spaceship.vert", "shaders/shader_spaceship_test.frag");
 	programCubeMap = shaderLoader.CreateProgram("shaders/shader_skybox.vert", "shaders/shader_skybox.frag");
+	programDepth = shaderLoader.CreateProgram("shaders/shadow_shader.vert", "shaders/shadow_shader.frag");
+	programTest = shaderLoader.CreateProgram("shaders/test.vert", "shaders/test.frag");
 
 	loadModelToContext("./models/sphere.obj", sphereContext);
 	loadModelToContext("./models/spaceship.obj", shipContext);
 	//loadModelToContext("./models/something.obj", hugeSphereContext);
 	loadModelToContext("./models/cube.obj", cubeMapContex);
 
+	loadModelToContext("./models/test.obj", shadowTestContext);
 
 	texture::earth = Core::LoadTexture("./textures/earth.png");
 	texture::clouds = Core::LoadTexture("./textures/clouds.jpg");
@@ -776,6 +882,8 @@ void init(GLFWwindow* window)
 	}
 
 	glfwSetKeyCallback(window, key_callback);
+
+	initDepthMap();
 }
 
 void shutdown(GLFWwindow* window)
@@ -844,8 +952,8 @@ void onPlanetProcessInput(GLFWwindow* window) {
 		exp_param -= 10;
 	}
 
-	spotPos = spaceshipPos - vec3(normalize(spaceshipDir).x, -1.f, normalize(spaceshipDir).z);
-	spotDir = spotLightOn * (spaceshipDir + vec3(0, -0.5f, 0));
+	spotPos = spaceshipPos - spaceshipDir + 10 * spaceshipUp;
+	spotDir = spotLightOn * (spaceshipDir - 0.8 * spaceshipUp);
 }
 
 //obsluga wejscia
@@ -910,8 +1018,11 @@ void processInput(GLFWwindow* window)
 		exp_param -= 10;
 	}
 
-	spotPos = spaceshipPos - vec3(normalize(spaceshipDir).x, -1.f, normalize(spaceshipDir).z);
-	spotDir = spotLightOn * (spaceshipDir + vec3(0, -0.5f, 0));
+	//spotPos = spaceshipPos - vec3(normalize(spaceshipDir).x, -1.f, normalize(spaceshipDir).z);
+	//spotDir = spotLightOn * (spaceshipDir + vec3(0, -0.5f, 0));
+
+	spotPos = spaceshipPos - spaceshipDir + cameraUp;
+	spotDir = spotLightOn * (spaceshipDir - 0.5 * cameraUp);
 }
 
 // funkcja jest glowna petla
